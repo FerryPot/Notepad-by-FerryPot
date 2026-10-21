@@ -1,0 +1,7 @@
+bin/
+obj/
+Publish/
+*.user
+*.suo
+*.pdb
+.vs/

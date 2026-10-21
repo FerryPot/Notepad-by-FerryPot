@@ -1,0 +1,58 @@
+<Window x:Class="NotepadByFerryPot.Views.StatsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Document Statistics" 
+        Height="360" Width="420"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="{DynamicResource MaterialDesignPaper}"
+        TextElement.Foreground="{DynamicResource MaterialDesignBody}">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Document Statistics" Style="{StaticResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,16"/>
+
+        <Border Grid.Row="1" Background="{DynamicResource MaterialDesignCardBackground}" CornerRadius="12" Padding="16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Words:" Margin="0,4"/>
+                <TextBlock Grid.Row="0" Grid.Column="1" x:Name="WordsText" FontWeight="Bold" Margin="0,4"/>
+
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="Characters (with spaces):" Margin="0,4"/>
+                <TextBlock Grid.Row="1" Grid.Column="1" x:Name="CharsWithSpacesText" FontWeight="Bold" Margin="0,4"/>
+
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="Characters (no spaces):" Margin="0,4"/>
+                <TextBlock Grid.Row="2" Grid.Column="1" x:Name="CharsNoSpacesText" FontWeight="Bold" Margin="0,4"/>
+
+                <TextBlock Grid.Row="3" Grid.Column="0" Text="Lines:" Margin="0,4"/>
+                <TextBlock Grid.Row="3" Grid.Column="1" x:Name="LinesText" FontWeight="Bold" Margin="0,4"/>
+
+                <TextBlock Grid.Row="4" Grid.Column="0" Text="Estimated Reading Time:" Margin="0,4"/>
+                <TextBlock Grid.Row="4" Grid.Column="1" x:Name="ReadingTimeText" FontWeight="Bold" Margin="0,4"/>
+
+                <TextBlock Grid.Row="5" Grid.Column="0" Text="Estimated Speaking Time:" Margin="0,4"/>
+                <TextBlock Grid.Row="5" Grid.Column="1" x:Name="SpeakingTimeText" FontWeight="Bold" Margin="0,4"/>
+            </Grid>
+        </Border>
+
+        <Button Grid.Row="2" Content="CLOSE" HorizontalAlignment="Right" Margin="0,16,0,0"
+                Style="{StaticResource MaterialDesignFlatButton}" Click="Close_Click"/>
+    </Grid>
+</Window>
