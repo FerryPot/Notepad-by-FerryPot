@@ -54,6 +54,7 @@ namespace NotepadByFerryPot.Views
 
             AmoledCheckBox.IsChecked = s.IsPureBlackDark;
             StatusBarCheckBox.IsChecked = s.ShowStatusBar;
+            FormattingToolbarCheckBox.IsChecked = s.ShowFormattingToolbar;
 
             FontFamilyComboBox.SelectedItem = s.FontFamilyName;
             if (FontFamilyComboBox.SelectedIndex == -1) FontFamilyComboBox.SelectedIndex = 0;
@@ -152,6 +153,7 @@ namespace NotepadByFerryPot.Views
 
             s.IsPureBlackDark = AmoledCheckBox.IsChecked == true;
             s.ShowStatusBar = StatusBarCheckBox.IsChecked == true;
+            s.ShowFormattingToolbar = FormattingToolbarCheckBox.IsChecked == true;
 
             if (FontFamilyComboBox.SelectedItem is string ff) s.FontFamilyName = ff;
             s.FontSize = FontSizeSlider.Value;

@@ -24,6 +24,7 @@ namespace NotepadByFerryPot.Services
         public bool ShowStatusBar { get; set; } = true;
         public bool FocusMode { get; set; } = false;
         public double ZoomLevel { get; set; } = 100.0;
+        public bool ShowFormattingToolbar { get; set; } = true;
     }
 
     public static class SettingsService

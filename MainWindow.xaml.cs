@@ -45,8 +45,10 @@ namespace NotepadByFerryPot
             WordWrapMenuItem.IsChecked = s.WordWrap;
             LineNumbersMenuItem.IsChecked = s.ShowLineNumbers;
             StatusBarMenuItem.IsChecked = s.ShowStatusBar;
+            FormattingToolbarMenuItem.IsChecked = s.ShowFormattingToolbar;
 
             StatusBarRow.Height = s.ShowStatusBar ? GridLength.Auto : new GridLength(0);
+            FormattingBarRow.Height = s.ShowFormattingToolbar ? GridLength.Auto : new GridLength(0);
 
             ActiveEditor.ApplySettings();
         }
@@ -524,12 +526,73 @@ namespace NotepadByFerryPot
             ApplySettingsToWindow();
         }
 
+        private void FormattingToolbar_Toggle(object sender, RoutedEventArgs e)
+        {
+            var s = SettingsService.Current;
+            s.ShowFormattingToolbar = !s.ShowFormattingToolbar;
+            SettingsService.Save();
+            ApplySettingsToWindow();
+        }
+
+        #region Formatting Toolbar Handlers
+
+        private void HeadingMenu_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.ContextMenu != null)
+            {
+                btn.ContextMenu.PlacementTarget = btn;
+                btn.ContextMenu.IsOpen = true;
+            }
+        }
+
+        private void Heading1_Click(object sender, RoutedEventArgs e) => ActiveEditor.ApplyHeading("# ");
+        private void Heading2_Click(object sender, RoutedEventArgs e) => ActiveEditor.ApplyHeading("## ");
+        private void Heading3_Click(object sender, RoutedEventArgs e) => ActiveEditor.ApplyHeading("### ");
+        private void Heading4_Click(object sender, RoutedEventArgs e) => ActiveEditor.ApplyHeading("#### ");
+        private void Paragraph_Click(object sender, RoutedEventArgs e) => ActiveEditor.ApplyHeading("");
+
+        private void ListMenu_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.ContextMenu != null)
+            {
+                btn.ContextMenu.PlacementTarget = btn;
+                btn.ContextMenu.IsOpen = true;
+            }
+        }
+
+        private void BulletList_Click(object sender, RoutedEventArgs e) => ActiveEditor.ApplyList("bullet");
+        private void NumberedList_Click(object sender, RoutedEventArgs e) => ActiveEditor.ApplyList("number");
+        private void Checklist_Click(object sender, RoutedEventArgs e) => ActiveEditor.ApplyList("check");
+
+        private void Bold_Click(object sender, RoutedEventArgs e) => ActiveEditor.ToggleWrap("**", "**");
+        private void Italic_Click(object sender, RoutedEventArgs e) => ActiveEditor.ToggleWrap("*", "*");
+        private void Strikethrough_Click(object sender, RoutedEventArgs e) => ActiveEditor.ToggleWrap("~~", "~~");
+        private void Link_Click(object sender, RoutedEventArgs e) => ActiveEditor.InsertLink();
+
+        private void TableMenu_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.ContextMenu != null)
+            {
+                btn.ContextMenu.PlacementTarget = btn;
+                btn.ContextMenu.IsOpen = true;
+            }
+        }
+
+        private void Table2x2_Click(object sender, RoutedEventArgs e) => ActiveEditor.InsertTable(2, 2);
+        private void Table3x3_Click(object sender, RoutedEventArgs e) => ActiveEditor.InsertTable(3, 3);
+        private void Table4x4_Click(object sender, RoutedEventArgs e) => ActiveEditor.InsertTable(4, 4);
+
+        private void ClearFormatting_Click(object sender, RoutedEventArgs e) => ActiveEditor.ClearFormatting();
+
+        #endregion
+
         private void FocusMode_Click(object sender, RoutedEventArgs e)
         {
             _isFocusMode = !_isFocusMode;
 
             TopAppBarRow.Height = _isFocusMode ? new GridLength(0) : GridLength.Auto;
             TabsBarRow.Height = _isFocusMode ? new GridLength(0) : GridLength.Auto;
+            FormattingBarRow.Height = _isFocusMode ? new GridLength(0) : (SettingsService.Current.ShowFormattingToolbar ? GridLength.Auto : new GridLength(0));
             StatusBarRow.Height = _isFocusMode ? new GridLength(0) : (SettingsService.Current.ShowStatusBar ? GridLength.Auto : new GridLength(0));
 
             WindowState = _isFocusMode ? WindowState.Maximized : WindowState.Normal;
@@ -672,6 +735,26 @@ namespace NotepadByFerryPot
             {
                 e.Handled = true;
                 Print_Click(sender, e);
+            }
+            else if (ctrl && e.Key == Key.B)
+            {
+                e.Handled = true;
+                Bold_Click(sender, e);
+            }
+            else if (ctrl && e.Key == Key.I)
+            {
+                e.Handled = true;
+                Italic_Click(sender, e);
+            }
+            else if (ctrl && e.Key == Key.K)
+            {
+                e.Handled = true;
+                Link_Click(sender, e);
+            }
+            else if (ctrl && shift && (e.Key == Key.S || e.Key == Key.X))
+            {
+                e.Handled = true;
+                Strikethrough_Click(sender, e);
             }
             else if (ctrl && e.Key == Key.OemComma)
             {

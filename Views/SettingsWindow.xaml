@@ -117,6 +117,12 @@
 
                             <CheckBox x:Name="StatusBarCheckBox" 
                                       Content="Show Status Bar at bottom of window" 
+                                      Margin="0,0,0,12"
+                                      Checked="SettingChanged" 
+                                      Unchecked="SettingChanged"/>
+
+                            <CheckBox x:Name="FormattingToolbarCheckBox" 
+                                      Content="Show Formatting Toolbar (Markdown / Notes)" 
                                       Checked="SettingChanged" 
                                       Unchecked="SettingChanged"/>
                         </StackPanel>
