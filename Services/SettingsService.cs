@@ -9,7 +9,7 @@ namespace NotepadByFerryPot.Services
     public class AppSettings
     {
         public BaseTheme BaseTheme { get; set; } = BaseTheme.Inherit;
-        public PrimaryColor PrimaryColor { get; set; } = PrimaryColor.DeepPurple;
+        public PrimaryColor PrimaryColor { get; set; } = PrimaryColor.Amber;
         public bool IsPureBlackDark { get; set; } = false;
         public string FontFamilyName { get; set; } = "Consolas";
         public double FontSize { get; set; } = 15.0;

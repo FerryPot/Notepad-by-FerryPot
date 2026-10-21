@@ -114,13 +114,15 @@ namespace NotepadByFerryPot
 
                 var sp = new StackPanel { Orientation = Orientation.Horizontal };
 
+                var brandDarkBrush = new SolidColorBrush(Color.FromRgb(0x1C, 0x1B, 0x1F));
+
                 // Modified dot / icon
                 var titleText = new TextBlock
                 {
                     Text = doc.DisplayTitle,
                     FontWeight = isActive ? FontWeights.SemiBold : FontWeights.Normal,
                     Foreground = isActive 
-                        ? (Brush)FindResource("MaterialDesign.Brush.Primary.Foreground") 
+                        ? brandDarkBrush 
                         : (Brush)FindResource("MaterialDesignBody"),
                     VerticalAlignment = VerticalAlignment.Center,
                     Margin = new Thickness(0, 0, 8, 0)
@@ -145,7 +147,7 @@ namespace NotepadByFerryPot
                     Width = 14,
                     Height = 14,
                     Foreground = isActive 
-                        ? (Brush)FindResource("MaterialDesign.Brush.Primary.Foreground") 
+                        ? brandDarkBrush 
                         : (Brush)FindResource("MaterialDesignBodyLight")
                 };
                 closeBtn.Content = closeIcon;

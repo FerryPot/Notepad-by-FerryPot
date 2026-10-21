@@ -62,6 +62,7 @@
                     Click="Replace_Click" />
             <Button Content="REPLACE ALL"
                     Style="{StaticResource MaterialDesignRaisedButton}"
+                    Foreground="#1C1B1F"
                     Click="ReplaceAll_Click" />
         </StackPanel>
     </Grid>

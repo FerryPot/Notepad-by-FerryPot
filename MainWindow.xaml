@@ -32,50 +32,52 @@
                 Background="{DynamicResource MaterialDesignCardBackground}"
                 BorderBrush="{DynamicResource MaterialDesignDivider}"
                 BorderThickness="0,0,0,1">
-            <DockPanel LastChildFill="True" Margin="8,4">
+            <DockPanel LastChildFill="True" Margin="10,4">
                 <!-- Action Buttons on Right -->
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
                     <Button Style="{StaticResource MaterialDesignIconButton}" 
+                            Width="36" Height="36"
                             ToolTip="Find &amp; Replace (Ctrl+F)"
                             Click="Find_Click">
                         <materialDesign:PackIcon Kind="Magnify" Width="20" Height="20"/>
                     </Button>
                     <Button Style="{StaticResource MaterialDesignIconButton}" 
+                            Width="36" Height="36"
                             ToolTip="Document Statistics"
                             Click="Stats_Click">
                         <materialDesign:PackIcon Kind="ChartBoxOutline" Width="20" Height="20"/>
                     </Button>
                     <Button Style="{StaticResource MaterialDesignIconButton}" 
+                            Width="36" Height="36"
                             ToolTip="Focus / Zen Mode (F11)"
                             Click="FocusMode_Click">
                         <materialDesign:PackIcon Kind="Fullscreen" Width="20" Height="20"/>
                     </Button>
-                    <Button Style="{StaticResource MaterialDesignOutlinedButton}" 
-                            ToolTip="Open Settings (Ctrl+,)"
-                            Height="32" Padding="10,0"
-                            Margin="4,0,0,0"
+                    <Button Style="{StaticResource MaterialDesignIconButton}" 
+                            Width="36" Height="36"
+                            ToolTip="Settings (Ctrl+,)"
                             Click="Settings_Click">
-                        <StackPanel Orientation="Horizontal">
-                            <materialDesign:PackIcon Kind="CogOutline" Width="18" Height="18" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="Settings" VerticalAlignment="Center" FontWeight="Medium" FontSize="13"/>
-                        </StackPanel>
+                        <materialDesign:PackIcon Kind="CogOutline" Width="20" Height="20"/>
                     </Button>
                 </StackPanel>
 
                 <!-- Menus & Brand on Left -->
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <!-- App Title / Brand -->
-                    <StackPanel Orientation="Horizontal" Margin="4,0,16,0" VerticalAlignment="Center">
-                        <Image Source="Assets/app.png" Width="22" Height="22" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                    <StackPanel Orientation="Horizontal" Margin="4,0,8,0" VerticalAlignment="Center">
+                        <Image Source="Assets/app.png" Width="22" Height="22" Margin="0,0,8,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
                         <TextBlock Text="Notepad" 
                                    FontWeight="Bold" 
                                    FontSize="15" 
                                    VerticalAlignment="Center"/>
                         <TextBlock Text=" by FerryPot" 
                                    FontSize="13" 
-                                   Opacity="0.6" 
+                                   Opacity="0.65" 
                                    VerticalAlignment="Center"/>
                     </StackPanel>
+
+                    <!-- Subtle Vertical Divider -->
+                    <Rectangle Width="1" Height="18" Fill="{DynamicResource MaterialDesignDivider}" Margin="8,0,8,0" VerticalAlignment="Center"/>
 
                     <!-- Menu Bar -->
                     <Menu Background="Transparent">
@@ -167,12 +169,6 @@
                                 <MenuItem Header="UTF-16 LE" Click="SetEncodingUTF16_Click"/>
                                 <MenuItem Header="ASCII" Click="SetEncodingASCII_Click"/>
                             </MenuItem>
-                        </MenuItem>
-
-                        <MenuItem Header="_Settings" InputGestureText="Ctrl+," Click="Settings_Click">
-                            <MenuItem.Icon>
-                                <materialDesign:PackIcon Kind="CogOutline" />
-                            </MenuItem.Icon>
                         </MenuItem>
                     </Menu>
                 </StackPanel>
@@ -269,6 +265,7 @@
                 <Button Style="{StaticResource MaterialDesignRaisedButton}"
                         ToolTip="Restore to Normal View (Esc or F11)"
                         Height="32" Padding="12,0"
+                        Foreground="#1C1B1F"
                         Click="FocusMode_Click">
                     <StackPanel Orientation="Horizontal">
                         <materialDesign:PackIcon Kind="WindowRestore" Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center"/>

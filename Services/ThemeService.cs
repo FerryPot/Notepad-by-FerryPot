@@ -16,6 +16,11 @@ namespace NotepadByFerryPot.Services
             // Apply base theme (Light / Dark / Inherit)
             theme.SetBaseTheme(settings.BaseTheme);
 
+            // Brand Colors: Google Material Amber / Warm Honey Gold (#FFC107)
+            var amberColor = SwatchHelper.Lookup[(MaterialDesignColor)PrimaryColor.Amber];
+            theme.SetPrimaryColor(amberColor);
+            theme.SetSecondaryColor(amberColor);
+
             // AMOLED Pure Black Dark Mode override
             if (settings.BaseTheme == BaseTheme.Dark && settings.IsPureBlackDark)
             {

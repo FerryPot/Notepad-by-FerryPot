@@ -261,6 +261,7 @@
                         Content="DONE" 
                         Width="110"
                         Style="{StaticResource MaterialDesignRaisedButton}" 
+                        Foreground="#1C1B1F"
                         Click="Done_Click"/>
             </DockPanel>
         </Grid>
