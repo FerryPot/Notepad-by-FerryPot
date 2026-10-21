@@ -44,7 +44,7 @@
         <!-- Status Message -->
         <TextBlock Grid.Row="3"
                    x:Name="StatusTextBlock"
-                   Foreground="{DynamicResource PrimaryHueMidBrush}"
+                   Foreground="{DynamicResource MaterialDesign.Brush.Primary}"
                    VerticalAlignment="Center"
                    FontWeight="Medium"
                    TextWrapping="Wrap" />

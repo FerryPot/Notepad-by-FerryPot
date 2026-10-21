@@ -47,7 +47,7 @@
                  Background="Transparent"
                  Foreground="{DynamicResource MaterialDesignBody}"
                  CaretBrush="{DynamicResource MaterialDesignBody}"
-                 SelectionBrush="{DynamicResource PrimaryHueMidBrush}"
+                 SelectionBrush="{DynamicResource MaterialDesign.Brush.Primary}"
                  SelectionOpacity="0.35"
                  SpellCheck.IsEnabled="False"
                  FontFamily="Consolas"

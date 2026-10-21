@@ -94,7 +94,7 @@ namespace NotepadByFerryPot
                 {
                     CornerRadius = new CornerRadius(16),
                     Background = isActive 
-                        ? (Brush)FindResource("PrimaryHueMidBrush") 
+                        ? (Brush)FindResource("MaterialDesign.Brush.Primary") 
                         : (Brush)FindResource("MaterialDesignCardBackground"),
                     BorderBrush = (Brush)FindResource("MaterialDesignDivider"),
                     BorderThickness = new Thickness(1),
@@ -120,7 +120,7 @@ namespace NotepadByFerryPot
                     Text = doc.DisplayTitle,
                     FontWeight = isActive ? FontWeights.SemiBold : FontWeights.Normal,
                     Foreground = isActive 
-                        ? (Brush)FindResource("PrimaryHueMidForegroundBrush") 
+                        ? (Brush)FindResource("MaterialDesign.Brush.Primary.Foreground") 
                         : (Brush)FindResource("MaterialDesignBody"),
                     VerticalAlignment = VerticalAlignment.Center,
                     Margin = new Thickness(0, 0, 8, 0)
@@ -145,7 +145,7 @@ namespace NotepadByFerryPot
                     Width = 14,
                     Height = 14,
                     Foreground = isActive 
-                        ? (Brush)FindResource("PrimaryHueMidForegroundBrush") 
+                        ? (Brush)FindResource("MaterialDesign.Brush.Primary.Foreground") 
                         : (Brush)FindResource("MaterialDesignBodyLight")
                 };
                 closeBtn.Content = closeIcon;
