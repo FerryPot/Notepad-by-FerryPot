@@ -522,6 +522,13 @@ namespace NotepadByFerryPot
 
             WindowState = _isFocusMode ? WindowState.Maximized : WindowState.Normal;
             WindowStyle = _isFocusMode ? WindowStyle.None : WindowStyle.SingleBorderWindow;
+
+            FullscreenControlBar.Visibility = _isFocusMode ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private void Minimize_Click(object sender, RoutedEventArgs e)
+        {
+            WindowState = WindowState.Minimized;
         }
 
         private void Stats_Click(object sender, RoutedEventArgs e)
@@ -604,6 +611,13 @@ namespace NotepadByFerryPot
 
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
         {
+            if (e.Key == Key.Escape && _isFocusMode)
+            {
+                e.Handled = true;
+                FocusMode_Click(sender, e);
+                return;
+            }
+
             bool ctrl = (Keyboard.Modifiers & ModifierKeys.Control) != 0;
             bool shift = (Keyboard.Modifiers & ModifierKeys.Shift) != 0;
 

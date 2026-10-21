@@ -248,5 +248,52 @@
                 </StackPanel>
             </DockPanel>
         </Border>
+        <!-- Floating Fullscreen Control Bar (Visible in Fullscreen Mode) -->
+        <Border Grid.Row="0" Grid.RowSpan="4"
+                x:Name="FullscreenControlBar"
+                Visibility="Collapsed"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                Margin="0,12,16,0"
+                CornerRadius="18"
+                Background="{DynamicResource MaterialDesignCardBackground}"
+                BorderBrush="{DynamicResource MaterialDesignDivider}"
+                BorderThickness="1"
+                Padding="6,3"
+                Panel.ZIndex="1000">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="12" Opacity="0.3" ShadowDepth="2" Direction="270"/>
+            </Border.Effect>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <!-- Exit Fullscreen Button -->
+                <Button Style="{StaticResource MaterialDesignFlatButton}"
+                        ToolTip="Exit Fullscreen (Esc or F11)"
+                        Height="30" Padding="10,0"
+                        Click="FocusMode_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="FullscreenExit" Width="18" Height="18" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Exit Fullscreen (Esc)" FontWeight="Medium" VerticalAlignment="Center" FontSize="12"/>
+                    </StackPanel>
+                </Button>
+
+                <Separator Margin="4,4,4,4"/>
+
+                <!-- Minimize Window -->
+                <Button Style="{StaticResource MaterialDesignIconButton}"
+                        Width="28" Height="28" Padding="0"
+                        ToolTip="Minimize Window"
+                        Click="Minimize_Click">
+                    <materialDesign:PackIcon Kind="WindowMinimize" Width="16" Height="16"/>
+                </Button>
+
+                <!-- Close Window -->
+                <Button Style="{StaticResource MaterialDesignIconButton}"
+                        Width="28" Height="28" Padding="0"
+                        ToolTip="Close Notepad"
+                        Click="Exit_Click">
+                    <materialDesign:PackIcon Kind="Close" Width="16" Height="16"/>
+                </Button>
+            </StackPanel>
+        </Border>
     </Grid>
 </Window>
