@@ -115,6 +115,44 @@ namespace NotepadByFerryPot
                     }
                 };
 
+                tabBorder.MouseRightButtonDown += (s, e) =>
+                {
+                    if (s is Border b && b.Tag is NotepadDocument d)
+                    {
+                        SetActiveDocument(d);
+                    }
+                };
+
+                // Context Menu on Tab Right-Click (New tab, Rename, Close, Close others, Close to right)
+                var contextMenu = new ContextMenu();
+
+                var newTabItem = new MenuItem { Header = "New tab", InputGestureText = "Ctrl+N" };
+                newTabItem.Click += (s, e) => CreateNewTab();
+                contextMenu.Items.Add(newTabItem);
+
+                var renameItem = new MenuItem { Header = "Rename..." };
+                renameItem.Click += (s, e) => PromptRenameTab(doc);
+                contextMenu.Items.Add(renameItem);
+
+                contextMenu.Items.Add(new Separator());
+
+                var closeTabItem = new MenuItem { Header = "Close tab", InputGestureText = "Ctrl+W" };
+                closeTabItem.Click += (s, e) => CloseTab(doc);
+                contextMenu.Items.Add(closeTabItem);
+
+                var closeOthersItem = new MenuItem { Header = "Close other tabs" };
+                closeOthersItem.IsEnabled = Documents.Count > 1;
+                closeOthersItem.Click += (s, e) => CloseOtherTabs(doc);
+                contextMenu.Items.Add(closeOthersItem);
+
+                int docIndex = Documents.IndexOf(doc);
+                var closeRightItem = new MenuItem { Header = "Close tabs to the right" };
+                closeRightItem.IsEnabled = docIndex < Documents.Count - 1;
+                closeRightItem.Click += (s, e) => CloseTabsToTheRight(doc);
+                contextMenu.Items.Add(closeRightItem);
+
+                tabBorder.ContextMenu = contextMenu;
+
                 var sp = new StackPanel { Orientation = Orientation.Horizontal };
 
                 var brandDarkBrush = new SolidColorBrush(Color.FromRgb(0x1C, 0x1B, 0x1F));
@@ -237,6 +275,79 @@ namespace NotepadByFerryPot
             }
 
             return true;
+        }
+
+        private void PromptRenameTab(NotepadDocument doc)
+        {
+            var dialog = new RenameDialog(doc.Title)
+            {
+                Owner = this
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                string newName = dialog.NewName;
+                if (!string.IsNullOrEmpty(doc.FilePath) && File.Exists(doc.FilePath))
+                {
+                    try
+                    {
+                        string dir = Path.GetDirectoryName(doc.FilePath)!;
+                        string ext = Path.GetExtension(doc.FilePath);
+                        if (!newName.EndsWith(ext, StringComparison.OrdinalIgnoreCase) && !newName.Contains('.'))
+                        {
+                            newName += ext;
+                        }
+
+                        string newPath = Path.Combine(dir, newName);
+                        if (!string.Equals(doc.FilePath, newPath, StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (File.Exists(newPath))
+                            {
+                                MessageBox.Show($"A file named \"{newName}\" already exists in this folder.", "Rename Tab", MessageBoxButton.OK, MessageBoxImage.Warning);
+                                return;
+                            }
+                            File.Move(doc.FilePath, newPath);
+                            doc.FilePath = newPath;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Could not rename file on disk: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        return;
+                    }
+                }
+
+                doc.Title = newName;
+                UpdateTitle();
+                RebuildTabsUI();
+            }
+        }
+
+        private void CloseOtherTabs(NotepadDocument keepDoc)
+        {
+            var docsToClose = Documents.Where(d => d != keepDoc).ToList();
+            foreach (var d in docsToClose)
+            {
+                if (!CloseTab(d))
+                {
+                    break;
+                }
+            }
+        }
+
+        private void CloseTabsToTheRight(NotepadDocument doc)
+        {
+            int index = Documents.IndexOf(doc);
+            if (index < 0) return;
+
+            var docsToClose = Documents.Skip(index + 1).ToList();
+            foreach (var d in docsToClose)
+            {
+                if (!CloseTab(d))
+                {
+                    break;
+                }
+            }
         }
 
         #endregion
