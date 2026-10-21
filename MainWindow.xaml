@@ -4,6 +4,7 @@
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:controls="clr-namespace:NotepadByFerryPot.Controls"
         Title="Notepad By FerryPot" 
+        Icon="Assets/app.ico"
         Height="720" Width="1080"
         MinHeight="400" MinWidth="600"
         WindowStartupLocation="CenterScreen"
@@ -65,10 +66,7 @@
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <!-- App Title / Brand -->
                     <StackPanel Orientation="Horizontal" Margin="4,0,16,0" VerticalAlignment="Center">
-                        <materialDesign:PackIcon Kind="NoteTextOutline" 
-                                                 Foreground="{DynamicResource MaterialDesign.Brush.Primary}" 
-                                                 Width="22" Height="22" 
-                                                 VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <Image Source="Assets/app.png" Width="22" Height="22" Margin="0,0,8,0" VerticalAlignment="Center"/>
                         <TextBlock Text="Notepad" 
                                    FontWeight="Bold" 
                                    FontSize="15" 

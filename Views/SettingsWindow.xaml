@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         Title="Settings — Notepad By FerryPot"
+        Icon="../Assets/app.ico"
         Height="540" Width="750"
         MinHeight="450" MinWidth="650"
         WindowStartupLocation="CenterOwner"
@@ -26,10 +27,7 @@
                 <!-- App Title in Sidebar -->
                 <StackPanel DockPanel.Dock="Top" Margin="8,0,8,24">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <materialDesign:PackIcon Kind="CogOutline" 
-                                                 Foreground="{DynamicResource MaterialDesign.Brush.Primary}" 
-                                                 Width="24" Height="24" 
-                                                 VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <Image Source="../Assets/app.png" Width="24" Height="24" Margin="0,0,8,0" VerticalAlignment="Center"/>
                         <TextBlock Text="Settings" 
                                    FontWeight="Bold" 
                                    FontSize="20" 
@@ -233,9 +231,7 @@
                             BorderThickness="1" CornerRadius="12" Padding="20" Margin="0,0,0,16">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                                <materialDesign:PackIcon Kind="NoteTextOutline" 
-                                                         Foreground="{DynamicResource MaterialDesign.Brush.Primary}" 
-                                                         Width="32" Height="32" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                <Image Source="../Assets/app.png" Width="36" Height="36" Margin="0,0,12,0" VerticalAlignment="Center"/>
                                 <StackPanel VerticalAlignment="Center">
                                     <TextBlock Text="Notepad By FerryPot" FontSize="18" FontWeight="Bold"/>
                                     <TextBlock Text="Version 1.0 (Windows Native x64)" Opacity="0.6" FontSize="12"/>
