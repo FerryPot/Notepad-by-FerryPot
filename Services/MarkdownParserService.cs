@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
@@ -15,7 +16,7 @@ namespace NotepadByFerryPot.Services
         {
             var doc = new FlowDocument
             {
-                PagePadding = new Thickness(28, 20, 28, 28),
+                PagePadding = new Thickness(24, 16, 24, 24),
                 FontFamily = fontFamily,
                 FontSize = baseFontSize,
                 Foreground = foreground,
@@ -160,6 +161,229 @@ namespace NotepadByFerryPot.Services
             }
 
             return doc;
+        }
+
+        public static string FlowDocumentToMarkdown(FlowDocument doc)
+        {
+            var sb = new StringBuilder();
+
+            foreach (var block in doc.Blocks)
+            {
+                if (block is Paragraph p)
+                {
+                    string pText = InlinesToMarkdown(p.Inlines);
+
+                    if (p.Tag is string tag && tag.StartsWith("h"))
+                    {
+                        if (int.TryParse(tag.Substring(1), out int lvl))
+                        {
+                            sb.AppendLine(new string('#', lvl) + " " + pText);
+                            sb.AppendLine();
+                            continue;
+                        }
+                    }
+                    else if (p.FontSize >= 24 && p.FontWeight == FontWeights.Bold)
+                    {
+                        sb.AppendLine("# " + pText);
+                        sb.AppendLine();
+                        continue;
+                    }
+                    else if (p.FontSize >= 20 && p.FontWeight == FontWeights.Bold)
+                    {
+                        sb.AppendLine("## " + pText);
+                        sb.AppendLine();
+                        continue;
+                    }
+                    else if (p.FontSize >= 17 && (p.FontWeight == FontWeights.Bold || p.FontWeight == FontWeights.SemiBold))
+                    {
+                        sb.AppendLine("### " + pText);
+                        sb.AppendLine();
+                        continue;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(pText))
+                    {
+                        sb.AppendLine();
+                    }
+                    else
+                    {
+                        sb.AppendLine(pText);
+                        sb.AppendLine();
+                    }
+                }
+                else if (block is List list)
+                {
+                    bool isNumbered = list.MarkerStyle == TextMarkerStyle.Decimal;
+                    int idx = 1;
+                    foreach (var item in list.ListItems)
+                    {
+                        string itemText = "";
+                        foreach (var b in item.Blocks)
+                        {
+                            if (b is Paragraph lp)
+                            {
+                                itemText += InlinesToMarkdown(lp.Inlines);
+                            }
+                            else if (b is BlockUIContainer bui && bui.Child is StackPanel sp)
+                            {
+                                foreach (var child in sp.Children)
+                                {
+                                    if (child is CheckBox cb)
+                                    {
+                                        itemText += cb.IsChecked == true ? "- [x] " : "- [ ] ";
+                                    }
+                                    else if (child is TextBlock tb)
+                                    {
+                                        itemText += tb.Text;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (itemText.StartsWith("- [ ]") || itemText.StartsWith("- [x]"))
+                        {
+                            sb.AppendLine(itemText);
+                        }
+                        else if (isNumbered)
+                        {
+                            sb.AppendLine($"{idx}. {itemText}");
+                            idx++;
+                        }
+                        else
+                        {
+                            sb.AppendLine($"* {itemText}");
+                        }
+                    }
+                    sb.AppendLine();
+                }
+                else if (block is Table table)
+                {
+                    foreach (var group in table.RowGroups)
+                    {
+                        for (int r = 0; r < group.Rows.Count; r++)
+                        {
+                            var row = group.Rows[r];
+                            var cellTexts = new List<string>();
+                            foreach (var cell in row.Cells)
+                            {
+                                string cellText = "";
+                                foreach (var b in cell.Blocks)
+                                {
+                                    if (b is Paragraph cp) cellText += InlinesToMarkdown(cp.Inlines);
+                                }
+                                cellTexts.Add(cellText.Trim());
+                            }
+                            sb.AppendLine("| " + string.Join(" | ", cellTexts) + " |");
+
+                            if (r == 0)
+                            {
+                                var seps = new List<string>();
+                                for (int c = 0; c < row.Cells.Count; c++) seps.Add("---");
+                                sb.AppendLine("| " + string.Join(" | ", seps) + " |");
+                            }
+                        }
+                    }
+                    sb.AppendLine();
+                }
+                else if (block is BlockUIContainer container)
+                {
+                    if (container.Tag as string == "hr" || (container.Child is System.Windows.Shapes.Rectangle))
+                    {
+                        sb.AppendLine("---");
+                        sb.AppendLine();
+                    }
+                    else if (container.Child is Border border && border.Child is TextBlock tb)
+                    {
+                        if (container.Tag as string == "quote")
+                        {
+                            sb.AppendLine("> " + tb.Text);
+                            sb.AppendLine();
+                        }
+                        else
+                        {
+                            sb.AppendLine("```");
+                            sb.AppendLine(tb.Text);
+                            sb.AppendLine("```");
+                            sb.AppendLine();
+                        }
+                    }
+                }
+            }
+
+            return sb.ToString().TrimEnd() + Environment.NewLine;
+        }
+
+        public static string InlinesToMarkdown(InlineCollection inlines)
+        {
+            var sb = new StringBuilder();
+            foreach (var inline in inlines)
+            {
+                sb.Append(InlineToMarkdown(inline));
+            }
+            return sb.ToString();
+        }
+
+        private static string InlineToMarkdown(Inline inline)
+        {
+            if (inline is Bold b)
+            {
+                return $"**{InlinesToMarkdown(b.Inlines)}**";
+            }
+            if (inline is Italic it)
+            {
+                return $"*{InlinesToMarkdown(it.Inlines)}*";
+            }
+            if (inline is Hyperlink hl)
+            {
+                return $"[{InlinesToMarkdown(hl.Inlines)}]({hl.NavigateUri})";
+            }
+            if (inline is Span sp)
+            {
+                string inner = InlinesToMarkdown(sp.Inlines);
+                if (sp.TextDecorations == TextDecorations.Strikethrough)
+                {
+                    return $"~~{inner}~~";
+                }
+                if (sp.FontWeight == FontWeights.Bold && sp.FontStyle == FontStyles.Italic)
+                {
+                    return $"***{inner}***";
+                }
+                if (sp.FontWeight == FontWeights.Bold)
+                {
+                    return $"**{inner}**";
+                }
+                if (sp.FontStyle == FontStyles.Italic)
+                {
+                    return $"*{inner}*";
+                }
+                return inner;
+            }
+            if (inline is Run r)
+            {
+                string text = r.Text;
+                if (r.FontWeight == FontWeights.Bold && r.FontStyle == FontStyles.Italic)
+                {
+                    return $"***{text}***";
+                }
+                if (r.FontWeight == FontWeights.Bold)
+                {
+                    return $"**{text}**";
+                }
+                if (r.FontStyle == FontStyles.Italic)
+                {
+                    return $"*{text}*";
+                }
+                if (r.FontFamily != null && r.FontFamily.Source == "Consolas")
+                {
+                    return $"`{text}`";
+                }
+                return text;
+            }
+            if (inline is LineBreak)
+            {
+                return "\n";
+            }
+            return "";
         }
 
         public static void AddFormattedInlines(Paragraph paragraph, string text, Brush foreground)
@@ -369,7 +593,8 @@ namespace NotepadByFerryPot.Services
             }
             catch { }
 
-            return new BlockUIContainer(border) { Margin = new Thickness(0, 8, 0, 12) };
+            var container = new BlockUIContainer(border) { Margin = new Thickness(0, 8, 0, 12), Tag = "code" };
+            return container;
         }
 
         private static Block CreateBlockquote(string text, double baseFontSize, Brush foreground)
@@ -397,7 +622,8 @@ namespace NotepadByFerryPot.Services
             }
             catch { }
 
-            return new BlockUIContainer(border);
+            var container = new BlockUIContainer(border) { Tag = "quote" };
+            return container;
         }
 
         private static Block CreateList(List<(string marker, string text)> items, bool isNumbered, double baseFontSize, Brush foreground)
@@ -453,6 +679,8 @@ namespace NotepadByFerryPot.Services
                 2 => baseFontSize * 1.5,
                 3 => baseFontSize * 1.25,
                 4 => baseFontSize * 1.1,
+                5 => baseFontSize * 1.05,
+                6 => baseFontSize * 1.0,
                 _ => baseFontSize
             };
 
@@ -461,7 +689,8 @@ namespace NotepadByFerryPot.Services
                 FontSize = size,
                 FontWeight = level <= 2 ? FontWeights.Bold : FontWeights.SemiBold,
                 Foreground = foreground,
-                Margin = new Thickness(0, baseFontSize * (level == 1 ? 1.2 : 0.8), 0, baseFontSize * 0.4)
+                Margin = new Thickness(0, baseFontSize * (level == 1 ? 1.2 : 0.8), 0, baseFontSize * 0.4),
+                Tag = "h" + level
             };
             AddFormattedInlines(p, text, foreground);
 
@@ -504,7 +733,7 @@ namespace NotepadByFerryPot.Services
             }
             catch { }
 
-            return new BlockUIContainer(rect);
+            return new BlockUIContainer(rect) { Tag = "hr" };
         }
 
         private static bool IsListLine(string line)

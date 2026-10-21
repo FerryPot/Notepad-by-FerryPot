@@ -60,19 +60,32 @@
                      SelectionChanged="MainTextBox_SelectionChanged" />
         </Grid>
 
-        <!-- Formatted View (Rendered Markdown FlowDocument) -->
-        <FlowDocumentScrollViewer x:Name="FormattedDocumentViewer"
-                                  Visibility="Collapsed"
-                                  VerticalScrollBarVisibility="Auto"
-                                  HorizontalScrollBarVisibility="Disabled"
-                                  Padding="20,12,20,20"
-                                  Background="Transparent">
+        <!-- Formatted View (Editable Rich Text FlowDocument) -->
+        <RichTextBox x:Name="FormattedRichTextBox"
+                     Visibility="Collapsed"
+                     AcceptsReturn="True"
+                     AcceptsTab="True"
+                     VerticalScrollBarVisibility="Auto"
+                     HorizontalScrollBarVisibility="Disabled"
+                     BorderThickness="0"
+                     Padding="24,16,24,24"
+                     Background="Transparent"
+                     Foreground="{DynamicResource MaterialDesignBody}"
+                     CaretBrush="{DynamicResource MaterialDesignBody}"
+                     SelectionBrush="{DynamicResource MaterialDesign.Brush.Primary}"
+                     SelectionOpacity="0.35"
+                     SpellCheck.IsEnabled="False"
+                     FontFamily="Segoe UI"
+                     FontSize="15"
+                     SelectionChanged="FormattedRichTextBox_SelectionChanged"
+                     TextChanged="FormattedRichTextBox_TextChanged"
+                     PreviewKeyDown="FormattedRichTextBox_PreviewKeyDown">
             <FlowDocument x:Name="FormattedFlowDocument" 
                           PagePadding="0" 
                           FontFamily="Segoe UI" 
                           FontSize="15"
                           Foreground="{DynamicResource MaterialDesignBody}">
             </FlowDocument>
-        </FlowDocumentScrollViewer>
+        </RichTextBox>
     </Grid>
 </UserControl>

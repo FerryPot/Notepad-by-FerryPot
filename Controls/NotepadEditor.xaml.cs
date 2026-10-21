@@ -2,6 +2,7 @@ using System;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using NotepadByFerryPot.Models;
@@ -28,6 +29,7 @@ namespace NotepadByFerryPot.Controls
         }
 
         public TextBox EditorTextBox => MainTextBox;
+        public RichTextBox RichEditor => FormattedRichTextBox;
 
         private bool _isFormattedView = false;
         public bool IsFormattedView
@@ -38,31 +40,63 @@ namespace NotepadByFerryPot.Controls
 
         public void SetViewMode(bool formatted)
         {
+            if (_isFormattedView == formatted) return;
+
             _isFormattedView = formatted;
             if (_isFormattedView)
             {
-                if (Document != null)
-                {
-                    Document.Content = MainTextBox.Text;
-                }
-                UpdateFormattedView();
+                var brush = (Brush)Application.Current.FindResource("MaterialDesignBody");
+                var ff = new FontFamily(SettingsService.Current.FontFamilyName);
+                var doc = MarkdownParserService.ParseToFlowDocument(MainTextBox.Text, ff, SettingsService.Current.FontSize, brush);
+                FormattedRichTextBox.Document = doc;
+
                 SyntaxViewGrid.Visibility = Visibility.Collapsed;
-                FormattedDocumentViewer.Visibility = Visibility.Visible;
+                FormattedRichTextBox.Visibility = Visibility.Visible;
+                FormattedRichTextBox.Focus();
+                UpdateStatusFromFormatted();
             }
             else
             {
+                string markdown = MarkdownParserService.FlowDocumentToMarkdown(FormattedRichTextBox.Document);
+                MainTextBox.Text = markdown;
+                if (Document != null)
+                {
+                    Document.Content = markdown;
+                }
+
                 SyntaxViewGrid.Visibility = Visibility.Visible;
-                FormattedDocumentViewer.Visibility = Visibility.Collapsed;
+                FormattedRichTextBox.Visibility = Visibility.Collapsed;
                 MainTextBox.Focus();
+                MainTextBox_SelectionChanged(this, new RoutedEventArgs());
+            }
+        }
+
+        public string GetCurrentContent()
+        {
+            if (_isFormattedView)
+            {
+                return MarkdownParserService.FlowDocumentToMarkdown(FormattedRichTextBox.Document);
+            }
+            return MainTextBox.Text;
+        }
+
+        public void SyncToDocument()
+        {
+            if (Document != null)
+            {
+                Document.Content = GetCurrentContent();
             }
         }
 
         public void UpdateFormattedView()
         {
-            var brush = (Brush)Application.Current.FindResource("MaterialDesignBody");
-            var ff = new FontFamily(SettingsService.Current.FontFamilyName);
-            var doc = MarkdownParserService.ParseToFlowDocument(MainTextBox.Text, ff, SettingsService.Current.FontSize, brush);
-            FormattedDocumentViewer.Document = doc;
+            if (_isFormattedView)
+            {
+                var brush = (Brush)Application.Current.FindResource("MaterialDesignBody");
+                var ff = new FontFamily(SettingsService.Current.FontFamilyName);
+                var doc = MarkdownParserService.ParseToFlowDocument(MainTextBox.Text, ff, SettingsService.Current.FontSize, brush);
+                FormattedRichTextBox.Document = doc;
+            }
         }
 
         public NotepadEditor()
@@ -174,7 +208,54 @@ namespace NotepadByFerryPot.Controls
 
             Document.CurrentLine = line + 1;
             Document.CurrentColumn = col + 1;
+            Document.CharacterCount = MainTextBox.Text.Length;
         }
+
+        #region Formatted View Event Handlers
+
+        private void FormattedRichTextBox_SelectionChanged(object sender, RoutedEventArgs e)
+        {
+            UpdateStatusFromFormatted();
+        }
+
+        private void FormattedRichTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (Document != null)
+            {
+                Document.IsModified = true;
+            }
+            UpdateStatusFromFormatted();
+        }
+
+        private void FormattedRichTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            // Enter key and Tab key work natively in RichTextBox
+        }
+
+        private void UpdateStatusFromFormatted()
+        {
+            if (Document == null) return;
+            try
+            {
+                var range = new TextRange(FormattedRichTextBox.Document.ContentStart, FormattedRichTextBox.Document.ContentEnd);
+                string raw = range.Text.Replace("\r\n", "\n");
+                Document.CharacterCount = Math.Max(0, raw.Length - 1);
+
+                var words = raw.Split(new[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+                Document.WordCount = words.Length;
+
+                var caret = FormattedRichTextBox.CaretPosition;
+                var lineStart = caret.GetLineStartPosition(0);
+                if (lineStart != null)
+                {
+                    int col = lineStart.GetOffsetToPosition(caret);
+                    Document.CurrentColumn = Math.Max(1, col + 1);
+                }
+            }
+            catch { }
+        }
+
+        #endregion
 
         private void UpdateLineNumbers()
         {
@@ -327,6 +408,29 @@ namespace NotepadByFerryPot.Controls
 
         public void ToggleWrap(string prefix, string suffix)
         {
+            if (_isFormattedView)
+            {
+                if (prefix == "**")
+                {
+                    EditingCommands.ToggleBold.Execute(null, FormattedRichTextBox);
+                }
+                else if (prefix == "*")
+                {
+                    EditingCommands.ToggleItalic.Execute(null, FormattedRichTextBox);
+                }
+                else if (prefix == "~~")
+                {
+                    var range = new TextRange(FormattedRichTextBox.Selection.Start, FormattedRichTextBox.Selection.End);
+                    var decs = range.GetPropertyValue(Inline.TextDecorationsProperty) as TextDecorationCollection;
+                    if (decs != null && decs.Count > 0)
+                        range.ApplyPropertyValue(Inline.TextDecorationsProperty, null);
+                    else
+                        range.ApplyPropertyValue(Inline.TextDecorationsProperty, TextDecorations.Strikethrough);
+                }
+                FormattedRichTextBox.Focus();
+                return;
+            }
+
             int selStart = MainTextBox.SelectionStart;
             int selLength = MainTextBox.SelectionLength;
             string text = MainTextBox.Text;
@@ -420,6 +524,43 @@ namespace NotepadByFerryPot.Controls
 
         public void ApplyHeading(string prefix)
         {
+            if (_isFormattedView)
+            {
+                var caret = FormattedRichTextBox.CaretPosition;
+                var p = caret.Paragraph;
+                if (p != null)
+                {
+                    int level = 0;
+                    while (level < prefix.Length && prefix[level] == '#') level++;
+                    double baseFontSize = SettingsService.Current.FontSize;
+
+                    if (level == 0)
+                    {
+                        p.FontSize = baseFontSize;
+                        p.FontWeight = FontWeights.Normal;
+                        p.Tag = null;
+                    }
+                    else
+                    {
+                        double size = level switch
+                        {
+                            1 => baseFontSize * 1.85,
+                            2 => baseFontSize * 1.5,
+                            3 => baseFontSize * 1.25,
+                            4 => baseFontSize * 1.1,
+                            5 => baseFontSize * 1.05,
+                            6 => baseFontSize * 1.0,
+                            _ => baseFontSize
+                        };
+                        p.FontSize = size;
+                        p.FontWeight = level <= 2 ? FontWeights.Bold : FontWeights.SemiBold;
+                        p.Tag = "h" + level;
+                    }
+                }
+                FormattedRichTextBox.Focus();
+                return;
+            }
+
             int caretIndex = MainTextBox.CaretIndex;
             int lineIndex = MainTextBox.GetLineIndexFromCharacterIndex(caretIndex);
             int lineStart = MainTextBox.GetCharacterIndexFromLineIndex(lineIndex);
@@ -453,6 +594,20 @@ namespace NotepadByFerryPot.Controls
 
         public void ApplyList(string listType)
         {
+            if (_isFormattedView)
+            {
+                if (listType == "number")
+                {
+                    EditingCommands.ToggleNumbering.Execute(null, FormattedRichTextBox);
+                }
+                else
+                {
+                    EditingCommands.ToggleBullets.Execute(null, FormattedRichTextBox);
+                }
+                FormattedRichTextBox.Focus();
+                return;
+            }
+
             int selStart = MainTextBox.SelectionStart;
             int selLength = MainTextBox.SelectionLength;
 
@@ -584,6 +739,14 @@ namespace NotepadByFerryPot.Controls
 
         public void ClearFormatting()
         {
+            if (_isFormattedView)
+            {
+                var range = new TextRange(FormattedRichTextBox.Selection.Start, FormattedRichTextBox.Selection.End);
+                range.ClearAllProperties();
+                FormattedRichTextBox.Focus();
+                return;
+            }
+
             int selStart = MainTextBox.SelectionStart;
             int selLen = MainTextBox.SelectionLength;
 

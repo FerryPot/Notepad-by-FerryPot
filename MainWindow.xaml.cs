@@ -228,7 +228,7 @@ namespace NotepadByFerryPot
             // Sync editor text first if this is the active document
             if (doc == _activeDocument && ActiveEditor != null)
             {
-                doc.Content = ActiveEditor.EditorTextBox.Text;
+                ActiveEditor.SyncToDocument();
             }
 
             bool hasUnsaved = doc.IsModified || 
@@ -392,7 +392,7 @@ namespace NotepadByFerryPot
             if (_activeDocument == null) return;
 
             LineColStatusText.Text = $"Ln {_activeDocument.CurrentLine}, Col {_activeDocument.CurrentColumn}";
-            WordCharStatusText.Text = $"{_activeDocument.WordCount:N0} words  |  {_activeDocument.CharacterCount:N0} chars";
+            WordCharStatusText.Text = $"{_activeDocument.CharacterCount:N0} characters";
             LineEndingStatusText.Text = _activeDocument.LineEnding;
             EncodingStatusText.Text = _activeDocument.EncodingName;
             ZoomStatusText.Text = $"{(int)SettingsService.Current.ZoomLevel}%";
@@ -457,6 +457,11 @@ namespace NotepadByFerryPot
 
         private bool SaveDocument(NotepadDocument doc)
         {
+            if (doc == _activeDocument && ActiveEditor != null)
+            {
+                ActiveEditor.SyncToDocument();
+            }
+
             if (string.IsNullOrEmpty(doc.FilePath))
             {
                 return SaveDocumentAs(doc);
@@ -479,6 +484,11 @@ namespace NotepadByFerryPot
 
         private bool SaveDocumentAs(NotepadDocument doc)
         {
+            if (doc == _activeDocument && ActiveEditor != null)
+            {
+                ActiveEditor.SyncToDocument();
+            }
+
             var dlg = new SaveFileDialog
             {
                 Filter = "Text Documents (*.txt)|*.txt|Markdown (*.md)|*.md|All Files (*.*)|*.*",
@@ -730,20 +740,22 @@ namespace NotepadByFerryPot
 
             if (isFormatted)
             {
-                ToolbarViewModeIcon.Kind = PackIconKind.CodeTags;
-                ToolbarViewModeText.Text = "Syntax View";
+                ToolbarViewModeIcon.Kind = PackIconKind.LanguageMarkdown;
+                ToolbarViewModeText.Text = "Markdown syntax";
 
-                StatusBarViewModeIcon.Kind = PackIconKind.EyeOutline;
-                StatusBarViewModeText.Text = "Formatted View";
+                StatusBarViewModeIcon.Kind = PackIconKind.FormatLetterCase;
+                StatusBarViewModeText.Text = "Formatted";
             }
             else
             {
-                ToolbarViewModeIcon.Kind = PackIconKind.EyeOutline;
-                ToolbarViewModeText.Text = "Formatted View";
+                ToolbarViewModeIcon.Kind = PackIconKind.FormatLetterCase;
+                ToolbarViewModeText.Text = "Formatted";
 
-                StatusBarViewModeIcon.Kind = PackIconKind.CodeTags;
-                StatusBarViewModeText.Text = "Syntax View";
+                StatusBarViewModeIcon.Kind = PackIconKind.LanguageMarkdown;
+                StatusBarViewModeText.Text = "Markdown syntax";
             }
+
+            UpdateStatusBar();
         }
 
         #endregion
@@ -960,7 +972,7 @@ namespace NotepadByFerryPot
             // Sync active editor content first
             if (_activeDocument != null && ActiveEditor != null)
             {
-                _activeDocument.Content = ActiveEditor.EditorTextBox.Text;
+                ActiveEditor.SyncToDocument();
             }
 
             // Check all documents for unsaved content
