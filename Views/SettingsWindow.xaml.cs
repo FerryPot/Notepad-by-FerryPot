@@ -1,9 +1,7 @@
 using System;
-using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using MaterialDesignColors;
 using MaterialDesignThemes.Wpf;
 using NotepadByFerryPot.Services;
 
@@ -41,38 +39,6 @@ namespace NotepadByFerryPot.Views
             TabSizeComboBox.Items.Add("2 spaces");
             TabSizeComboBox.Items.Add("4 spaces");
             TabSizeComboBox.Items.Add("8 spaces");
-
-            // Populate Material 3 Colors
-            var colors = new[]
-            {
-                (PrimaryColor.DeepPurple, "Deep Purple", Color.FromRgb(103, 80, 164)),
-                (PrimaryColor.Indigo, "Indigo", Color.FromRgb(63, 81, 181)),
-                (PrimaryColor.Blue, "Google Blue", Color.FromRgb(26, 115, 232)),
-                (PrimaryColor.Teal, "Teal", Color.FromRgb(0, 150, 136)),
-                (PrimaryColor.Green, "Emerald Green", Color.FromRgb(76, 175, 80)),
-                (PrimaryColor.Amber, "Sunset Amber", Color.FromRgb(255, 193, 7)),
-                (PrimaryColor.DeepOrange, "Deep Orange", Color.FromRgb(255, 87, 34)),
-                (PrimaryColor.Pink, "Pink", Color.FromRgb(233, 30, 99)),
-                (PrimaryColor.Cyan, "Cyan", Color.FromRgb(0, 188, 212)),
-            };
-
-            foreach (var (pColor, name, swatchColor) in colors)
-            {
-                var btn = new Button
-                {
-                    Width = 36,
-                    Height = 36,
-                    Margin = new Thickness(4),
-                    ToolTip = name,
-                    Background = new SolidColorBrush(swatchColor),
-                    BorderBrush = Brushes.Transparent,
-                    BorderThickness = new Thickness(0),
-                    Style = (Style)FindResource("MaterialDesignFloatingActionMiniButton"),
-                    Tag = pColor
-                };
-                btn.Click += ColorButton_Click;
-                ColorPaletteWrapPanel.Children.Add(btn);
-            }
         }
 
         private void LoadCurrentSettings()
@@ -112,6 +78,36 @@ namespace NotepadByFerryPot.Views
             };
         }
 
+        private void NavigationListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (PageAppearance == null || PageTypography == null || PageEditor == null || PageAbout == null)
+                return;
+
+            PageAppearance.Visibility = Visibility.Collapsed;
+            PageTypography.Visibility = Visibility.Collapsed;
+            PageEditor.Visibility = Visibility.Collapsed;
+            PageAbout.Visibility = Visibility.Collapsed;
+
+            switch (NavigationListBox.SelectedIndex)
+            {
+                case 0:
+                    PageAppearance.Visibility = Visibility.Visible;
+                    break;
+                case 1:
+                    PageTypography.Visibility = Visibility.Visible;
+                    break;
+                case 2:
+                    PageEditor.Visibility = Visibility.Visible;
+                    break;
+                case 3:
+                    PageAbout.Visibility = Visibility.Visible;
+                    break;
+                default:
+                    PageAppearance.Visibility = Visibility.Visible;
+                    break;
+            }
+        }
+
         private void ThemeRadio_Checked(object sender, RoutedEventArgs e)
         {
             if (_isInitializing) return;
@@ -126,22 +122,9 @@ namespace NotepadByFerryPot.Views
             SettingsApplied?.Invoke(this, EventArgs.Empty);
         }
 
-        private void ColorButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is Button btn && btn.Tag is PrimaryColor pColor)
-            {
-                var s = SettingsService.Current;
-                s.PrimaryColor = pColor;
-                ThemeService.ApplyTheme(s);
-                SettingsService.Save();
-                SettingsApplied?.Invoke(this, EventArgs.Empty);
-            }
-        }
-
         private void SettingChanged(object sender, RoutedEventArgs e)
         {
             if (_isInitializing) return;
-
             SaveAndApply();
         }
 

@@ -49,10 +49,15 @@
                             Click="FocusMode_Click">
                         <materialDesign:PackIcon Kind="Fullscreen" Width="20" Height="20"/>
                     </Button>
-                    <Button Style="{StaticResource MaterialDesignIconButton}" 
-                            ToolTip="Settings (Ctrl+,)"
+                    <Button Style="{StaticResource MaterialDesignOutlinedButton}" 
+                            ToolTip="Open Settings (Ctrl+,)"
+                            Height="32" Padding="10,0"
+                            Margin="4,0,0,0"
                             Click="Settings_Click">
-                        <materialDesign:PackIcon Kind="CogOutline" Width="20" Height="20"/>
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="CogOutline" Width="18" Height="18" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Settings" VerticalAlignment="Center" FontWeight="Medium" FontSize="13"/>
+                        </StackPanel>
                     </Button>
                 </StackPanel>
 
@@ -166,7 +171,11 @@
                             </MenuItem>
                         </MenuItem>
 
-                        <MenuItem Header="_Settings" Click="Settings_Click"/>
+                        <MenuItem Header="_Settings" InputGestureText="Ctrl+," Click="Settings_Click">
+                            <MenuItem.Icon>
+                                <materialDesign:PackIcon Kind="CogOutline" />
+                            </MenuItem.Icon>
+                        </MenuItem>
                     </Menu>
                 </StackPanel>
             </DockPanel>
@@ -219,7 +228,14 @@
                     <Separator Margin="0,0,16,0"/>
                     <TextBlock x:Name="EncodingStatusText" 
                                Text="UTF-8" 
+                               Margin="0,0,12,0"
                                Opacity="0.8"/>
+                    <Button Style="{StaticResource MaterialDesignIconButton}" 
+                            Width="20" Height="20" Padding="0"
+                            ToolTip="Settings (Ctrl+,)"
+                            Click="Settings_Click">
+                        <materialDesign:PackIcon Kind="CogOutline" Width="15" Height="15"/>
+                    </Button>
                 </StackPanel>
 
                 <!-- Left Side: Position and Counters -->

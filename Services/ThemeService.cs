@@ -13,12 +13,8 @@ namespace NotepadByFerryPot.Services
             var paletteHelper = new PaletteHelper();
             var theme = paletteHelper.GetTheme();
 
-            // Apply base theme
+            // Apply base theme (Light / Dark / Inherit)
             theme.SetBaseTheme(settings.BaseTheme);
-
-            // Apply primary color
-            var primaryColor = SwatchHelper.Lookup[(MaterialDesignColor)settings.PrimaryColor];
-            theme.SetPrimaryColor(primaryColor);
 
             // AMOLED Pure Black Dark Mode override
             if (settings.BaseTheme == BaseTheme.Dark && settings.IsPureBlackDark)

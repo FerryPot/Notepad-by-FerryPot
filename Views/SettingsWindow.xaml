@@ -3,157 +3,270 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         Title="Settings — Notepad By FerryPot"
-        Height="540" Width="680"
+        Height="540" Width="750"
+        MinHeight="450" MinWidth="650"
         WindowStartupLocation="CenterOwner"
-        ResizeMode="NoResize"
         Background="{DynamicResource MaterialDesignPaper}"
         TextElement.Foreground="{DynamicResource MaterialDesignBody}">
-    <Grid Margin="24">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <!-- Sidebar Navigation (Width 210) -->
+            <ColumnDefinition Width="210"/>
+            <!-- Main Content Area -->
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
 
-        <!-- Header -->
-        <StackPanel Grid.Row="0" Margin="0,0,0,16">
-            <TextBlock Text="Customization &amp; Preferences" 
-                       Style="{StaticResource MaterialDesignHeadline5TextBlock}" 
-                       FontWeight="SemiBold"/>
-            <TextBlock Text="Material 3 Stock styling and editor behavior" 
-                       Style="{StaticResource MaterialDesignCaptionTextBlock}" 
-                       Opacity="0.7"/>
-        </StackPanel>
-
-        <!-- Tabbed Settings Content -->
-        <TabControl Grid.Row="1" Style="{StaticResource MaterialDesignNavigationRailTabControl}">
-            <!-- Appearance Tab -->
-            <TabItem Header="Appearance">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="16,8,0,0">
-                    <StackPanel>
-                        <!-- Theme Mode -->
-                        <TextBlock Text="THEME MODE" Style="{StaticResource MaterialDesignOverlineTextBlock}"/>
-                        <StackPanel Orientation="Horizontal" Margin="0,4,0,12">
-                            <RadioButton x:Name="ThemeSystemRadio" Content="System Default" Margin="0,0,16,0" Checked="ThemeRadio_Checked"/>
-                            <RadioButton x:Name="ThemeLightRadio" Content="Light" Margin="0,0,16,0" Checked="ThemeRadio_Checked"/>
-                            <RadioButton x:Name="ThemeDarkRadio" Content="Dark" Checked="ThemeRadio_Checked"/>
-                        </StackPanel>
-
-                        <!-- Primary Color Palette -->
-                        <TextBlock Text="MATERIAL 3 COLOR SCHEME" Style="{StaticResource MaterialDesignOverlineTextBlock}"/>
-                        <WrapPanel x:Name="ColorPaletteWrapPanel" Margin="0,4,0,12">
-                            <!-- Color choices added in code-behind -->
-                        </WrapPanel>
-
-                        <!-- AMOLED Dark Mode -->
-                        <TextBlock Text="DISPLAY OPTIONS" Style="{StaticResource MaterialDesignOverlineTextBlock}"/>
-                        <CheckBox x:Name="AmoledCheckBox" 
-                                  Content="OLED Pure Black Dark Mode (AMOLED #000000)" 
-                                  Margin="0,4,0,8"
-                                  Checked="SettingChanged" 
-                                  Unchecked="SettingChanged"/>
-                        <CheckBox x:Name="StatusBarCheckBox" 
-                                  Content="Show Status Bar at bottom" 
-                                  Margin="0,4,0,8"
-                                  Checked="SettingChanged" 
-                                  Unchecked="SettingChanged"/>
+        <!-- Left Navigation Sidebar -->
+        <Border Grid.Column="0" 
+                Background="{DynamicResource MaterialDesignCardBackground}"
+                BorderBrush="{DynamicResource MaterialDesignDivider}"
+                BorderThickness="0,0,1,0"
+                Padding="12,20,12,16">
+            <DockPanel LastChildFill="True">
+                <!-- App Title in Sidebar -->
+                <StackPanel DockPanel.Dock="Top" Margin="8,0,8,24">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <materialDesign:PackIcon Kind="CogOutline" 
+                                                 Foreground="{DynamicResource MaterialDesign.Brush.Primary}" 
+                                                 Width="24" Height="24" 
+                                                 VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="Settings" 
+                                   FontWeight="Bold" 
+                                   FontSize="20" 
+                                   VerticalAlignment="Center"/>
                     </StackPanel>
-                </ScrollViewer>
-            </TabItem>
-
-            <!-- Typography Tab -->
-            <TabItem Header="Typography">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="16,8,0,0">
-                    <StackPanel>
-                        <!-- Font Family -->
-                        <TextBlock Text="FONT FAMILY" Style="{StaticResource MaterialDesignOverlineTextBlock}"/>
-                        <ComboBox x:Name="FontFamilyComboBox" 
-                                  Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                  Margin="0,4,0,16" 
-                                  SelectionChanged="FontFamilyComboBox_SelectionChanged"/>
-
-                        <!-- Font Size -->
-                        <TextBlock Text="FONT SIZE (PT)" Style="{StaticResource MaterialDesignOverlineTextBlock}"/>
-                        <DockPanel Margin="0,4,0,16">
-                            <TextBlock x:Name="FontSizeValueText" Text="15 pt" Width="50" DockPanel.Dock="Right" TextAlignment="Right" FontWeight="SemiBold"/>
-                            <Slider x:Name="FontSizeSlider" 
-                                    Minimum="10" Maximum="36" Value="15" 
-                                    TickFrequency="1" IsSnapToTickEnabled="True"
-                                    ValueChanged="FontSizeSlider_ValueChanged"/>
-                        </DockPanel>
-
-                        <!-- Font Weight -->
-                        <TextBlock Text="FONT WEIGHT" Style="{StaticResource MaterialDesignOverlineTextBlock}"/>
-                        <ComboBox x:Name="FontWeightComboBox" 
-                                  Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                  Margin="0,4,0,16" 
-                                  SelectionChanged="SettingChanged"/>
-
-                        <!-- Live Preview Box -->
-                        <TextBlock Text="LIVE PREVIEW" Style="{StaticResource MaterialDesignOverlineTextBlock}"/>
-                        <Border Background="{DynamicResource MaterialDesignCardBackground}" 
-                                BorderBrush="{DynamicResource MaterialDesignDivider}"
-                                BorderThickness="1" CornerRadius="8" Padding="16">
-                            <TextBlock x:Name="PreviewTextBlock" 
-                                       Text="The quick brown fox jumps over the lazy dog. 1234567890 /* Material 3 */" 
-                                       TextWrapping="Wrap"/>
-                        </Border>
-                    </StackPanel>
-                </ScrollViewer>
-            </TabItem>
-
-            <!-- Editor Features Tab -->
-            <TabItem Header="Editor">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="16,8,0,0">
-                    <StackPanel>
-                        <TextBlock Text="EDITOR BEHAVIOR" Style="{StaticResource MaterialDesignOverlineTextBlock}"/>
-                        <CheckBox x:Name="WordWrapCheckBox" 
-                                  Content="Word wrap long lines" 
-                                  Checked="SettingChanged" Unchecked="SettingChanged"/>
-                        <CheckBox x:Name="LineNumbersCheckBox" 
-                                  Content="Show line numbers in gutter" 
-                                  Checked="SettingChanged" Unchecked="SettingChanged"/>
-                        <CheckBox x:Name="AutoIndentCheckBox" 
-                                  Content="Auto-indent on Enter (match previous line)" 
-                                  Checked="SettingChanged" Unchecked="SettingChanged"/>
-                        <CheckBox x:Name="AutoCloseBracketsCheckBox" 
-                                  Content="Auto-close brackets and quotes ( ) [ ] { } &quot; &quot;" 
-                                  Checked="SettingChanged" Unchecked="SettingChanged"/>
-                        <CheckBox x:Name="UseSpacesForTabCheckBox" 
-                                  Content="Insert spaces when pressing Tab" 
-                                  Checked="SettingChanged" Unchecked="SettingChanged"/>
-
-                        <TextBlock Text="TAB INDENT SIZE" Style="{StaticResource MaterialDesignOverlineTextBlock}" Margin="0,12,0,4"/>
-                        <ComboBox x:Name="TabSizeComboBox" 
-                                  Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                  Width="180" HorizontalAlignment="Left"
-                                  SelectionChanged="SettingChanged"/>
-                    </StackPanel>
-                </ScrollViewer>
-            </TabItem>
-
-            <!-- About Tab -->
-            <TabItem Header="About">
-                <StackPanel Margin="16,16,0,0">
-                    <TextBlock Text="Notepad By FerryPot" Style="{StaticResource MaterialDesignHeadline5TextBlock}" FontWeight="Bold"/>
-                    <TextBlock Text="Version 1.0 (Windows x64 Native)" Style="{StaticResource MaterialDesignBody2TextBlock}" Opacity="0.7" Margin="0,4,0,16"/>
-                    <TextBlock Text="A modern, high-performance Windows text editor built with official Google Material Design 3 (M3) stock components and smooth multi-tab editing." 
-                               Style="{StaticResource MaterialDesignBody1TextBlock}" TextWrapping="Wrap" Margin="0,0,0,12"/>
-                    <TextBlock Text="Features:" FontWeight="SemiBold" Margin="0,8,0,4"/>
-                    <TextBlock Text="• Multi-tab document workspace" Margin="12,2,0,0"/>
-                    <TextBlock Text="• Dynamic Material 3 color schemes &amp; OLED pure black mode" Margin="12,2,0,0"/>
-                    <TextBlock Text="• Full Find &amp; Replace with match case and whole-word regex" Margin="12,2,0,0"/>
-                    <TextBlock Text="• Smart auto-indent and bracket auto-closing" Margin="12,2,0,0"/>
-                    <TextBlock Text="• Synchronized smooth line numbering" Margin="12,2,0,0"/>
-                    <TextBlock Text="• Detailed document metrics and live word counter" Margin="12,2,0,0"/>
-                    <TextBlock Text="• Drag-and-drop file opening" Margin="12,2,0,0"/>
+                    <TextBlock Text="Notepad By FerryPot" 
+                               FontSize="12" 
+                               Opacity="0.6" 
+                               Margin="32,2,0,0"/>
                 </StackPanel>
-            </TabItem>
-        </TabControl>
 
-        <!-- Bottom Action Button -->
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
-            <Button Content="DONE" Style="{StaticResource MaterialDesignRaisedButton}" Width="100" Click="Done_Click"/>
-        </StackPanel>
+                <!-- Navigation ListBox -->
+                <ListBox x:Name="NavigationListBox" 
+                         SelectionChanged="NavigationListBox_SelectionChanged"
+                         SelectedIndex="0"
+                         Style="{StaticResource MaterialDesignNavigationListBox}">
+                    <ListBoxItem x:Name="NavItemAppearance" Padding="12,12">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="ThemeLightDark" Width="20" Height="20" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Appearance" FontSize="14" FontWeight="Medium" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </ListBoxItem>
+
+                    <ListBoxItem x:Name="NavItemTypography" Padding="12,12">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="FormatSize" Width="20" Height="20" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Typography" FontSize="14" FontWeight="Medium" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </ListBoxItem>
+
+                    <ListBoxItem x:Name="NavItemEditor" Padding="12,12">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="Tune" Width="20" Height="20" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Editor" FontSize="14" FontWeight="Medium" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </ListBoxItem>
+
+                    <ListBoxItem x:Name="NavItemAbout" Padding="12,12">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="InformationOutline" Width="20" Height="20" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="About" FontSize="14" FontWeight="Medium" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </ListBoxItem>
+                </ListBox>
+            </DockPanel>
+        </Border>
+
+        <!-- Right Content Pages -->
+        <Grid Grid.Column="1" Margin="28,24,28,20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Page 1: Appearance -->
+            <ScrollViewer Grid.Row="0" x:Name="PageAppearance" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <TextBlock Text="Appearance" Style="{StaticResource MaterialDesignHeadline5TextBlock}" FontWeight="Bold" Margin="0,0,0,4"/>
+                    <TextBlock Text="Customize how the application looks and adapts to your environment." Opacity="0.65" Margin="0,0,0,24"/>
+
+                    <!-- Theme Mode Card -->
+                    <Border Background="{DynamicResource MaterialDesignCardBackground}" 
+                            BorderBrush="{DynamicResource MaterialDesignDivider}"
+                            BorderThickness="1" CornerRadius="12" Padding="20" Margin="0,0,0,16">
+                        <StackPanel>
+                            <TextBlock Text="THEME MODE" Style="{StaticResource MaterialDesignOverlineTextBlock}" Margin="0,0,0,12"/>
+                            <StackPanel Orientation="Horizontal">
+                                <RadioButton x:Name="ThemeSystemRadio" Content="System Default" Margin="0,0,24,0" Checked="ThemeRadio_Checked"/>
+                                <RadioButton x:Name="ThemeLightRadio" Content="Light" Margin="0,0,24,0" Checked="ThemeRadio_Checked"/>
+                                <RadioButton x:Name="ThemeDarkRadio" Content="Dark" Checked="ThemeRadio_Checked"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Display Options Card -->
+                    <Border Background="{DynamicResource MaterialDesignCardBackground}" 
+                            BorderBrush="{DynamicResource MaterialDesignDivider}"
+                            BorderThickness="1" CornerRadius="12" Padding="20">
+                        <StackPanel>
+                            <TextBlock Text="DISPLAY OPTIONS" Style="{StaticResource MaterialDesignOverlineTextBlock}" Margin="0,0,0,12"/>
+                            
+                            <CheckBox x:Name="AmoledCheckBox" 
+                                      Content="OLED Pure Black Dark Mode (AMOLED #000000)" 
+                                      Margin="0,0,0,12"
+                                      Checked="SettingChanged" 
+                                      Unchecked="SettingChanged"/>
+
+                            <CheckBox x:Name="StatusBarCheckBox" 
+                                      Content="Show Status Bar at bottom of window" 
+                                      Checked="SettingChanged" 
+                                      Unchecked="SettingChanged"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Page 2: Typography -->
+            <ScrollViewer Grid.Row="0" x:Name="PageTypography" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                <StackPanel>
+                    <TextBlock Text="Typography" Style="{StaticResource MaterialDesignHeadline5TextBlock}" FontWeight="Bold" Margin="0,0,0,4"/>
+                    <TextBlock Text="Select font families, sizing, and text formatting." Opacity="0.65" Margin="0,0,0,24"/>
+
+                    <Border Background="{DynamicResource MaterialDesignCardBackground}" 
+                            BorderBrush="{DynamicResource MaterialDesignDivider}"
+                            BorderThickness="1" CornerRadius="12" Padding="20" Margin="0,0,0,16">
+                        <StackPanel>
+                            <!-- Font Family -->
+                            <TextBlock Text="FONT FAMILY" Style="{StaticResource MaterialDesignOverlineTextBlock}" Margin="0,0,0,6"/>
+                            <ComboBox x:Name="FontFamilyComboBox" 
+                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                      Margin="0,0,0,16" 
+                                      SelectionChanged="FontFamilyComboBox_SelectionChanged"/>
+
+                            <!-- Font Size -->
+                            <TextBlock Text="FONT SIZE" Style="{StaticResource MaterialDesignOverlineTextBlock}" Margin="0,0,0,6"/>
+                            <DockPanel Margin="0,0,0,16">
+                                <TextBlock x:Name="FontSizeValueText" Text="15 pt" Width="60" DockPanel.Dock="Right" TextAlignment="Right" FontWeight="Bold"/>
+                                <Slider x:Name="FontSizeSlider" 
+                                        Minimum="10" Maximum="36" Value="15" 
+                                        TickFrequency="1" IsSnapToTickEnabled="True"
+                                        ValueChanged="FontSizeSlider_ValueChanged"/>
+                            </DockPanel>
+
+                            <!-- Font Weight -->
+                            <TextBlock Text="FONT WEIGHT" Style="{StaticResource MaterialDesignOverlineTextBlock}" Margin="0,0,0,6"/>
+                            <ComboBox x:Name="FontWeightComboBox" 
+                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                      SelectionChanged="SettingChanged"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Live Preview -->
+                    <Border Background="{DynamicResource MaterialDesignCardBackground}" 
+                            BorderBrush="{DynamicResource MaterialDesignDivider}"
+                            BorderThickness="1" CornerRadius="12" Padding="20">
+                        <StackPanel>
+                            <TextBlock Text="LIVE PREVIEW" Style="{StaticResource MaterialDesignOverlineTextBlock}" Margin="0,0,0,12"/>
+                            <Border Background="{DynamicResource MaterialDesignPaper}" 
+                                    BorderBrush="{DynamicResource MaterialDesignDivider}"
+                                    BorderThickness="1" CornerRadius="8" Padding="16">
+                                <TextBlock x:Name="PreviewTextBlock" 
+                                           Text="The quick brown fox jumps over the lazy dog. 1234567890 /* Material 3 */" 
+                                           TextWrapping="Wrap"/>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Page 3: Editor -->
+            <ScrollViewer Grid.Row="0" x:Name="PageEditor" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                <StackPanel>
+                    <TextBlock Text="Editor Behavior" Style="{StaticResource MaterialDesignHeadline5TextBlock}" FontWeight="Bold" Margin="0,0,0,4"/>
+                    <TextBlock Text="Configure text editing aids, indentation, and formatting preferences." Opacity="0.65" Margin="0,0,0,24"/>
+
+                    <Border Background="{DynamicResource MaterialDesignCardBackground}" 
+                            BorderBrush="{DynamicResource MaterialDesignDivider}"
+                            BorderThickness="1" CornerRadius="12" Padding="20">
+                        <StackPanel>
+                            <CheckBox x:Name="WordWrapCheckBox" 
+                                      Content="Word wrap long lines" 
+                                      Margin="0,0,0,12"
+                                      Checked="SettingChanged" Unchecked="SettingChanged"/>
+                            <CheckBox x:Name="LineNumbersCheckBox" 
+                                      Content="Show line numbers in gutter" 
+                                      Margin="0,0,0,12"
+                                      Checked="SettingChanged" Unchecked="SettingChanged"/>
+                            <CheckBox x:Name="AutoIndentCheckBox" 
+                                      Content="Auto-indent on Enter (match previous line)" 
+                                      Margin="0,0,0,12"
+                                      Checked="SettingChanged" Unchecked="SettingChanged"/>
+                            <CheckBox x:Name="AutoCloseBracketsCheckBox" 
+                                      Content="Auto-close brackets and quotes ( ) [ ] { } &quot; &quot; ' '" 
+                                      Margin="0,0,12,12"
+                                      Checked="SettingChanged" Unchecked="SettingChanged"/>
+                            <CheckBox x:Name="UseSpacesForTabCheckBox" 
+                                      Content="Insert spaces when pressing Tab key" 
+                                      Margin="0,0,0,16"
+                                      Checked="SettingChanged" Unchecked="SettingChanged"/>
+
+                            <Separator Margin="0,0,0,16"/>
+
+                            <TextBlock Text="TAB INDENT SIZE" Style="{StaticResource MaterialDesignOverlineTextBlock}" Margin="0,0,0,6"/>
+                            <ComboBox x:Name="TabSizeComboBox" 
+                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                      Width="200" HorizontalAlignment="Left"
+                                      SelectionChanged="SettingChanged"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Page 4: About -->
+            <ScrollViewer Grid.Row="0" x:Name="PageAbout" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                <StackPanel>
+                    <TextBlock Text="About" Style="{StaticResource MaterialDesignHeadline5TextBlock}" FontWeight="Bold" Margin="0,0,0,4"/>
+                    <TextBlock Text="Application information and shortcuts." Opacity="0.65" Margin="0,0,0,24"/>
+
+                    <Border Background="{DynamicResource MaterialDesignCardBackground}" 
+                            BorderBrush="{DynamicResource MaterialDesignDivider}"
+                            BorderThickness="1" CornerRadius="12" Padding="20" Margin="0,0,0,16">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                <materialDesign:PackIcon Kind="NoteTextOutline" 
+                                                         Foreground="{DynamicResource MaterialDesign.Brush.Primary}" 
+                                                         Width="32" Height="32" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Notepad By FerryPot" FontSize="18" FontWeight="Bold"/>
+                                    <TextBlock Text="Version 1.0 (Windows Native x64)" Opacity="0.6" FontSize="12"/>
+                                </StackPanel>
+                            </StackPanel>
+                            
+                            <TextBlock Text="A modern, high-performance Windows text editor built with official Google Material Design 3 (M3) stock components and smooth multi-tab editing." 
+                                       TextWrapping="Wrap" Margin="0,0,0,16"/>
+
+                            <Separator Margin="0,0,0,16"/>
+
+                            <TextBlock Text="CORE FEATURES" Style="{StaticResource MaterialDesignOverlineTextBlock}" Margin="0,0,0,8"/>
+                            <TextBlock Text="• Multi-tab document workspace with close protection" Margin="8,2,0,0"/>
+                            <TextBlock Text="• Full modeless Find &amp; Replace with case and whole-word matching" Margin="8,2,0,0"/>
+                            <TextBlock Text="• Smart auto-indent and bracket auto-pairing" Margin="8,2,0,0"/>
+                            <TextBlock Text="• Synchronized smooth line numbering" Margin="8,2,0,0"/>
+                            <TextBlock Text="• Real-time word, character, and line counter" Margin="8,2,0,0"/>
+                            <TextBlock Text="• Drag-and-drop file opening" Margin="8,2,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Bottom Actions -->
+            <DockPanel Grid.Row="1" Margin="0,16,0,0" LastChildFill="False">
+                <Button DockPanel.Dock="Right" 
+                        Content="DONE" 
+                        Width="110"
+                        Style="{StaticResource MaterialDesignRaisedButton}" 
+                        Click="Done_Click"/>
+            </DockPanel>
+        </Grid>
     </Grid>
 </Window>
