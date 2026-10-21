@@ -37,6 +37,7 @@ namespace NotepadByFerryPot
             // Create initial document
             CreateNewTab();
             ApplySettingsToWindow();
+            UpdateViewModeUI();
         }
 
         public void ApplySettingsToWindow()
@@ -586,6 +587,56 @@ namespace NotepadByFerryPot
 
         #endregion
 
+        #region View Mode Handlers (Formatted vs Syntax View)
+
+        private void ToggleViewMode_Click(object sender, RoutedEventArgs e)
+        {
+            SetViewMode(!ActiveEditor.IsFormattedView);
+        }
+
+        private void SyntaxView_Click(object sender, RoutedEventArgs e)
+        {
+            SetViewMode(false);
+        }
+
+        private void FormattedView_Click(object sender, RoutedEventArgs e)
+        {
+            SetViewMode(true);
+        }
+
+        private void SetViewMode(bool formatted)
+        {
+            ActiveEditor.SetViewMode(formatted);
+            UpdateViewModeUI();
+        }
+
+        private void UpdateViewModeUI()
+        {
+            bool isFormatted = ActiveEditor.IsFormattedView;
+
+            SyntaxViewMenuItem.IsChecked = !isFormatted;
+            FormattedViewMenuItem.IsChecked = isFormatted;
+
+            if (isFormatted)
+            {
+                ToolbarViewModeIcon.Kind = PackIconKind.CodeTags;
+                ToolbarViewModeText.Text = "Syntax View";
+
+                StatusBarViewModeIcon.Kind = PackIconKind.EyeOutline;
+                StatusBarViewModeText.Text = "Formatted View";
+            }
+            else
+            {
+                ToolbarViewModeIcon.Kind = PackIconKind.EyeOutline;
+                ToolbarViewModeText.Text = "Formatted View";
+
+                StatusBarViewModeIcon.Kind = PackIconKind.CodeTags;
+                StatusBarViewModeText.Text = "Syntax View";
+            }
+        }
+
+        #endregion
+
         private void FocusMode_Click(object sender, RoutedEventArgs e)
         {
             _isFocusMode = !_isFocusMode;
@@ -731,7 +782,12 @@ namespace NotepadByFerryPot
                 e.Handled = true;
                 Find_Click(sender, e);
             }
-            else if (ctrl && e.Key == Key.P)
+            else if (ctrl && shift && (e.Key == Key.M || e.Key == Key.P))
+            {
+                e.Handled = true;
+                ToggleViewMode_Click(sender, e);
+            }
+            else if (ctrl && !shift && e.Key == Key.P)
             {
                 e.Handled = true;
                 Print_Click(sender, e);

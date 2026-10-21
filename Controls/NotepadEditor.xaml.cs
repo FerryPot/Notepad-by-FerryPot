@@ -29,6 +29,42 @@ namespace NotepadByFerryPot.Controls
 
         public TextBox EditorTextBox => MainTextBox;
 
+        private bool _isFormattedView = false;
+        public bool IsFormattedView
+        {
+            get => _isFormattedView;
+            set => SetViewMode(value);
+        }
+
+        public void SetViewMode(bool formatted)
+        {
+            _isFormattedView = formatted;
+            if (_isFormattedView)
+            {
+                if (Document != null)
+                {
+                    Document.Content = MainTextBox.Text;
+                }
+                UpdateFormattedView();
+                SyntaxViewGrid.Visibility = Visibility.Collapsed;
+                FormattedDocumentViewer.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                SyntaxViewGrid.Visibility = Visibility.Visible;
+                FormattedDocumentViewer.Visibility = Visibility.Collapsed;
+                MainTextBox.Focus();
+            }
+        }
+
+        public void UpdateFormattedView()
+        {
+            var brush = (Brush)Application.Current.FindResource("MaterialDesignBody");
+            var ff = new FontFamily(SettingsService.Current.FontFamilyName);
+            var doc = MarkdownParserService.ParseToFlowDocument(MainTextBox.Text, ff, SettingsService.Current.FontSize, brush);
+            FormattedDocumentViewer.Document = doc;
+        }
+
         public NotepadEditor()
         {
             InitializeComponent();
@@ -60,6 +96,10 @@ namespace NotepadByFerryPot.Controls
                     newDoc.PropertyChanged += editor.Doc_PropertyChanged;
                     editor.MainTextBox.Text = newDoc.Content;
                     editor.UpdateLineNumbers();
+                    if (editor._isFormattedView)
+                    {
+                        editor.UpdateFormattedView();
+                    }
                 }
                 else
                 {
@@ -77,6 +117,10 @@ namespace NotepadByFerryPot.Controls
                     int caret = MainTextBox.CaretIndex;
                     MainTextBox.Text = Document.Content;
                     MainTextBox.CaretIndex = Math.Min(caret, MainTextBox.Text.Length);
+                }
+                if (_isFormattedView)
+                {
+                    UpdateFormattedView();
                 }
             }
         }
@@ -235,6 +279,9 @@ namespace NotepadByFerryPot.Controls
                 '{' => '}',
                 '"' => '"',
                 '\'' => '\'',
+                '`' => '`',
+                '*' => '*',
+                '~' => '~',
                 _ => '\0'
             };
 
@@ -243,10 +290,20 @@ namespace NotepadByFerryPot.Controls
                 int caret = MainTextBox.CaretIndex;
                 if (MainTextBox.SelectionLength > 0)
                 {
-                    // Wrap selection in brackets/quotes
+                    // Wrap selection in brackets/quotes/markdown tokens
                     string sel = MainTextBox.SelectedText;
                     MainTextBox.SelectedText = $"{ch}{sel}{closing}";
                     MainTextBox.Select(caret + 1, sel.Length);
+                    e.Handled = true;
+                    return;
+                }
+
+                // If typing asterisk/backtick/tilde and next character is already that character, skip over it
+                if ((ch == '*' || ch == '`' || ch == '~') &&
+                    caret < MainTextBox.Text.Length &&
+                    MainTextBox.Text[caret] == ch)
+                {
+                    MainTextBox.CaretIndex++;
                     e.Handled = true;
                     return;
                 }
@@ -256,7 +313,7 @@ namespace NotepadByFerryPot.Controls
                 MainTextBox.CaretIndex = caret + 1;
                 e.Handled = true;
             }
-            else if ((ch == ')' || ch == ']' || ch == '}' || ch == '"' || ch == '\'') &&
+            else if ((ch == ')' || ch == ']' || ch == '}' || ch == '"' || ch == '\'' || ch == '*' || ch == '`' || ch == '~') &&
                      MainTextBox.CaretIndex < MainTextBox.Text.Length &&
                      MainTextBox.Text[MainTextBox.CaretIndex] == ch)
             {
@@ -273,6 +330,46 @@ namespace NotepadByFerryPot.Controls
             int selStart = MainTextBox.SelectionStart;
             int selLength = MainTextBox.SelectionLength;
             string text = MainTextBox.Text;
+
+            // If no text is selected, check if caret is inside a word
+            if (selLength == 0 && text.Length > 0)
+            {
+                int wordStart = selStart;
+                int wordEnd = selStart;
+
+                while (wordStart > 0 && !char.IsWhiteSpace(text[wordStart - 1]) && text[wordStart - 1] != '*' && text[wordStart - 1] != '~' && text[wordStart - 1] != '`')
+                    wordStart--;
+
+                while (wordEnd < text.Length && !char.IsWhiteSpace(text[wordEnd]) && text[wordEnd] != '*' && text[wordEnd] != '~' && text[wordEnd] != '`')
+                    wordEnd++;
+
+                if (wordEnd > wordStart)
+                {
+                    // Check if word is already wrapped with prefix and suffix
+                    if (wordStart >= prefix.Length && wordEnd + suffix.Length <= text.Length &&
+                        text.Substring(wordStart - prefix.Length, prefix.Length) == prefix &&
+                        text.Substring(wordEnd, suffix.Length) == suffix)
+                    {
+                        // Unwrap
+                        string word = text.Substring(wordStart, wordEnd - wordStart);
+                        MainTextBox.Select(wordStart - prefix.Length, word.Length + prefix.Length + suffix.Length);
+                        MainTextBox.SelectedText = word;
+                        MainTextBox.Select(wordStart - prefix.Length, word.Length);
+                        MainTextBox.Focus();
+                        return;
+                    }
+                    else
+                    {
+                        // Wrap the word
+                        string word = text.Substring(wordStart, wordEnd - wordStart);
+                        MainTextBox.Select(wordStart, word.Length);
+                        MainTextBox.SelectedText = prefix + word + suffix;
+                        MainTextBox.Select(wordStart + prefix.Length, word.Length);
+                        MainTextBox.Focus();
+                        return;
+                    }
+                }
+            }
 
             if (selLength > 0)
             {
