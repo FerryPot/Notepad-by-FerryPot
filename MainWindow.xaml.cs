@@ -182,13 +182,23 @@ namespace NotepadByFerryPot
 
         private bool CloseTab(NotepadDocument doc)
         {
-            if (doc.IsModified)
+            // Sync editor text first if this is the active document
+            if (doc == _activeDocument && ActiveEditor != null)
+            {
+                doc.Content = ActiveEditor.EditorTextBox.Text;
+            }
+
+            bool hasUnsaved = doc.IsModified || 
+                              doc.Content != doc.SavedContent || 
+                              (!string.IsNullOrEmpty(doc.Content) && string.IsNullOrEmpty(doc.FilePath));
+
+            if (hasUnsaved)
             {
                 var result = MessageBox.Show(
-                    $"Do you want to save changes to \"{doc.Title}\"?",
+                    $"Do you want to save changes to \"{doc.Title}\"?\n\nAny unsaved changes will be lost if you do not save.",
                     "Notepad by FerryPot",
                     MessageBoxButton.YesNoCancel,
-                    MessageBoxImage.Question);
+                    MessageBoxImage.Warning);
 
                 if (result == MessageBoxResult.Cancel)
                 {
@@ -695,17 +705,27 @@ namespace NotepadByFerryPot
 
         private void Window_Closing(object sender, CancelEventArgs e)
         {
-            // Check all modified documents
+            // Sync active editor content first
+            if (_activeDocument != null && ActiveEditor != null)
+            {
+                _activeDocument.Content = ActiveEditor.EditorTextBox.Text;
+            }
+
+            // Check all documents for unsaved content
             foreach (var doc in Documents)
             {
-                if (doc.IsModified)
+                bool hasUnsaved = doc.IsModified || 
+                                  doc.Content != doc.SavedContent || 
+                                  (!string.IsNullOrEmpty(doc.Content) && string.IsNullOrEmpty(doc.FilePath));
+
+                if (hasUnsaved)
                 {
                     SetActiveDocument(doc);
                     var result = MessageBox.Show(
-                        $"Do you want to save changes to \"{doc.Title}\" before closing?",
+                        $"Do you want to save changes to \"{doc.Title}\"?\n\nAny unsaved changes will be lost if you do not save.",
                         "Notepad by FerryPot",
                         MessageBoxButton.YesNoCancel,
-                        MessageBoxImage.Question);
+                        MessageBoxImage.Warning);
 
                     if (result == MessageBoxResult.Cancel)
                     {
