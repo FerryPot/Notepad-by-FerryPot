@@ -186,7 +186,7 @@ namespace NotepadByFerryPot
             {
                 var result = MessageBox.Show(
                     $"Do you want to save changes to \"{doc.Title}\"?",
-                    "Notepad By FerryPot",
+                    "Notepad by FerryPot",
                     MessageBoxButton.YesNoCancel,
                     MessageBoxImage.Question);
 
@@ -253,11 +253,11 @@ namespace NotepadByFerryPot
         {
             if (_activeDocument != null)
             {
-                Title = $"{_activeDocument.DisplayTitle} - Notepad By FerryPot";
+                Title = $"{_activeDocument.DisplayTitle} - Notepad by FerryPot";
             }
             else
             {
-                Title = "Notepad By FerryPot";
+                Title = "Notepad by FerryPot";
             }
         }
 
@@ -703,7 +703,7 @@ namespace NotepadByFerryPot
                     SetActiveDocument(doc);
                     var result = MessageBox.Show(
                         $"Do you want to save changes to \"{doc.Title}\" before closing?",
-                        "Notepad By FerryPot",
+                        "Notepad by FerryPot",
                         MessageBoxButton.YesNoCancel,
                         MessageBoxImage.Question);
 

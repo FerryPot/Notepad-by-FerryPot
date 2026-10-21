@@ -1,4 +1,4 @@
-# Notepad By FerryPot
+# Notepad by FerryPot
 
 A modern, buttery-smooth Windows desktop text editor built with official **Google Material Design 3 (M3) Stock Design**, multi-tab workspace, and extensive customization options.
 

@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:controls="clr-namespace:NotepadByFerryPot.Controls"
-        Title="Notepad By FerryPot" 
+        Title="Notepad by FerryPot" 
         Icon="Assets/app.ico"
         Height="720" Width="1080"
         MinHeight="400" MinWidth="600"

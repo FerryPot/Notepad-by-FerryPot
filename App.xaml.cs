@@ -13,7 +13,7 @@ namespace NotepadByFerryPot
             {
                 MessageBox.Show(
                     $"An unexpected error occurred:\n\n{args.Exception.Message}\n\n{args.Exception.StackTrace}",
-                    "Notepad By FerryPot - Error",
+                    "Notepad by FerryPot - Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
                 args.Handled = true;
@@ -25,7 +25,7 @@ namespace NotepadByFerryPot
                 {
                     MessageBox.Show(
                         $"A fatal error occurred:\n\n{ex.Message}\n\n{ex.StackTrace}",
-                        "Notepad By FerryPot - Fatal Error",
+                        "Notepad by FerryPot - Fatal Error",
                         MessageBoxButton.OK,
                         MessageBoxImage.Error);
                 }

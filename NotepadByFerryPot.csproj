@@ -8,7 +8,9 @@
     <UseWPF>true</UseWPF>
     <AssemblyName>NotepadByFerryPot</AssemblyName>
     <RootNamespace>NotepadByFerryPot</RootNamespace>
-    <ApplicationTitle>Notepad By FerryPot</ApplicationTitle>
+    <ApplicationTitle>Notepad by FerryPot</ApplicationTitle>
+    <Product>Notepad by FerryPot</Product>
+    <Title>Notepad by FerryPot</Title>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>false</SelfContained>
