@@ -1,6 +1,7 @@
 bin/
 obj/
 Publish/
+*.exe
 *.user
 *.suo
 *.pdb
