@@ -470,29 +470,20 @@ namespace NotepadByFerryPot.Services
                     string url = match.Groups["url"].Value;
                     try
                     {
-                        var hyperlink = new Hyperlink
+                        var hyperlink = new Hyperlink();
+                        if (Uri.TryCreate(url, UriKind.RelativeOrAbsolute, out var navUri))
                         {
-                            NavigateUri = new Uri(url.StartsWith("http") ? url : "https://" + url),
-                            ToolTip = url
-                        };
+                            hyperlink.NavigateUri = navUri;
+                        }
+
+                        SafeLinkService.ConfigureHyperlink(hyperlink, url);
+
                         try
                         {
                             hyperlink.Foreground = (Brush)Application.Current.FindResource("MaterialDesign.Brush.Primary");
                         }
                         catch { }
 
-                        hyperlink.RequestNavigate += (s, e) =>
-                        {
-                            try
-                            {
-                                Process.Start(new ProcessStartInfo
-                                {
-                                    FileName = e.Uri.AbsoluteUri,
-                                    UseShellExecute = true
-                                });
-                            }
-                            catch { }
-                        };
                         AddFormattedInlinesInternal(hyperlink.Inlines, linkText, foreground);
                         inlines.Add(hyperlink);
                     }

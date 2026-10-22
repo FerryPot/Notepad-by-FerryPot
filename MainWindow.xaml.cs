@@ -332,6 +332,16 @@ namespace NotepadByFerryPot
                         }
 
                         string newPath = Path.Combine(dir, newName);
+
+                        // Ensure final path stays in the exact same folder
+                        string fullDir = Path.GetFullPath(dir).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                        string? newDir = Path.GetDirectoryName(Path.GetFullPath(newPath))?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                        if (!string.Equals(fullDir, newDir, StringComparison.OrdinalIgnoreCase))
+                        {
+                            MessageBox.Show("The renamed file must remain in the same folder.", "Invalid Path", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            return;
+                        }
+
                         if (!string.Equals(doc.FilePath, newPath, StringComparison.OrdinalIgnoreCase))
                         {
                             if (File.Exists(newPath))
@@ -500,17 +510,36 @@ namespace NotepadByFerryPot
                 return SaveDocumentAs(doc);
             }
 
-            try
+            // Check if file is read-only before attempting save
+            if (File.Exists(doc.FilePath))
             {
-                File.WriteAllText(doc.FilePath, doc.Content, doc.Encoding);
+                var attrs = File.GetAttributes(doc.FilePath);
+                if ((attrs & FileAttributes.ReadOnly) != 0)
+                {
+                    var choice = MessageBox.Show(
+                        $"\"{Path.GetFileName(doc.FilePath)}\" is marked as read-only.\n\nWould you like to save it with a different name using Save As?",
+                        "Read-Only File",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Warning);
+
+                    if (choice == MessageBoxResult.Yes)
+                    {
+                        return SaveDocumentAs(doc);
+                    }
+                    return false;
+                }
+            }
+
+            if (SaveFileAtomically(doc.FilePath, doc.Content, doc.Encoding, out var error))
+            {
                 doc.MarkAsSaved(doc.FilePath);
                 UpdateTitle();
                 RebuildTabsUI();
                 return true;
             }
-            catch (Exception ex)
+            else
             {
-                MessageBox.Show($"Could not save file:\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Could not save file:\n{error}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 return false;
             }
         }
@@ -530,22 +559,114 @@ namespace NotepadByFerryPot
 
             if (dlg.ShowDialog() == true)
             {
-                try
+                if (File.Exists(dlg.FileName))
                 {
-                    File.WriteAllText(dlg.FileName, doc.Content, doc.Encoding);
+                    var attrs = File.GetAttributes(dlg.FileName);
+                    if ((attrs & FileAttributes.ReadOnly) != 0)
+                    {
+                        MessageBox.Show(
+                            $"Cannot save to \"{Path.GetFileName(dlg.FileName)}\" because it is marked as read-only. Please choose another file or destination.",
+                            "Read-Only File",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning);
+                        return false;
+                    }
+                }
+
+                if (SaveFileAtomically(dlg.FileName, doc.Content, doc.Encoding, out var error))
+                {
                     doc.MarkAsSaved(dlg.FileName);
                     UpdateTitle();
                     RebuildTabsUI();
                     return true;
                 }
-                catch (Exception ex)
+                else
                 {
-                    MessageBox.Show($"Could not save file:\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show($"Could not save file:\n{error}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     return false;
                 }
             }
 
             return false;
+        }
+
+        private static bool SaveFileAtomically(string targetPath, string content, Encoding encoding, out string? errorMessage)
+        {
+            errorMessage = null;
+            string? dir = Path.GetDirectoryName(targetPath);
+            if (string.IsNullOrEmpty(dir))
+            {
+                dir = Environment.CurrentDirectory;
+            }
+
+            try
+            {
+                Directory.CreateDirectory(dir);
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Cannot access directory \"{dir}\":\n{ex.Message}";
+                return false;
+            }
+
+            // Create temporary file in the same directory to allow atomic replace on the same filesystem volume
+            string tempFile = Path.Combine(dir, $".tmp_{Guid.NewGuid():N}.tmp");
+
+            try
+            {
+                // Write content with document encoding and original line endings to temp file
+                File.WriteAllText(tempFile, content, encoding);
+
+                if (File.Exists(targetPath))
+                {
+                    try
+                    {
+                        File.Replace(tempFile, targetPath, null);
+                        return true;
+                    }
+                    catch (PlatformNotSupportedException)
+                    {
+                        File.Move(tempFile, targetPath, overwrite: true);
+                        return true;
+                    }
+                    catch (IOException)
+                    {
+                        try
+                        {
+                            File.Move(tempFile, targetPath, overwrite: true);
+                            return true;
+                        }
+                        catch
+                        {
+                            // Fall back to direct write only if replace fails (e.g. network share)
+                            File.WriteAllText(targetPath, content, encoding);
+                            return true;
+                        }
+                    }
+                }
+                else
+                {
+                    File.Move(tempFile, targetPath);
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                errorMessage = ex.Message;
+                return false;
+            }
+            finally
+            {
+                // Never leave a partial or temporary file behind
+                if (File.Exists(tempFile))
+                {
+                    try
+                    {
+                        File.Delete(tempFile);
+                    }
+                    catch { }
+                }
+            }
         }
 
         private void SaveFile_Click(object sender, RoutedEventArgs e)

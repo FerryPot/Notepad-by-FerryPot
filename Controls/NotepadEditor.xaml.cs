@@ -988,9 +988,9 @@ namespace NotepadByFerryPot.Controls
 
                 var hl = new Hyperlink(new Run(text))
                 {
-                    NavigateUri = new Uri("https://"),
-                    ToolTip = "https://"
+                    NavigateUri = new Uri("https://")
                 };
+                SafeLinkService.ConfigureHyperlink(hl, "https://");
                 try { hl.Foreground = (Brush)Application.Current.FindResource("MaterialDesign.Brush.Primary"); } catch { }
 
                 var p = FormattedRichTextBox.CaretPosition.Paragraph;
