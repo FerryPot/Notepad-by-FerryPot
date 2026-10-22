@@ -30,6 +30,7 @@ namespace NotepadByFerryPot
             ThemeService.ApplyTheme(SettingsService.Current);
 
             Loaded += MainWindow_Loaded;
+            SizeChanged += MainWindow_SizeChanged;
         }
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -38,6 +39,7 @@ namespace NotepadByFerryPot
             CreateNewTab();
             ApplySettingsToWindow();
             UpdateViewModeUI();
+            UpdateToolbarResponsiveLayout();
         }
 
         public void ApplySettingsToWindow()
@@ -49,7 +51,12 @@ namespace NotepadByFerryPot
             FormattingToolbarMenuItem.IsChecked = s.ShowFormattingToolbar;
 
             StatusBarRow.Height = s.ShowStatusBar ? GridLength.Auto : new GridLength(0);
-            FormattingBarRow.Height = s.ShowFormattingToolbar ? GridLength.Auto : new GridLength(0);
+            if (ToolbarVerticalDivider != null && FormattingToolbarPanel != null)
+            {
+                var vis = s.ShowFormattingToolbar ? Visibility.Visible : Visibility.Collapsed;
+                ToolbarVerticalDivider.Visibility = vis;
+                FormattingToolbarPanel.Visibility = vis;
+            }
 
             ActiveEditor.ApplySettings();
         }
@@ -102,14 +109,16 @@ namespace NotepadByFerryPot
 
                 var tabBorder = new Border
                 {
-                    CornerRadius = new CornerRadius(16),
+                    Height = 30,
+                    CornerRadius = new CornerRadius(15),
                     Background = isActive 
                         ? (Brush)FindResource("MaterialDesign.Brush.Primary") 
                         : (Brush)FindResource("MaterialDesignCardBackground"),
                     BorderBrush = (Brush)FindResource("MaterialDesignDivider"),
                     BorderThickness = new Thickness(1),
-                    Margin = new Thickness(0, 0, 6, 4),
-                    Padding = new Thickness(12, 6, 8, 6),
+                    Margin = new Thickness(0, 0, 4, 0),
+                    Padding = new Thickness(10, 0, 8, 0),
+                    VerticalAlignment = VerticalAlignment.Center,
                     Cursor = Cursors.Hand,
                     Tag = doc
                 };
@@ -160,11 +169,15 @@ namespace NotepadByFerryPot
 
                 tabBorder.ContextMenu = contextMenu;
 
-                var sp = new StackPanel { Orientation = Orientation.Horizontal };
+                var sp = new StackPanel 
+                { 
+                    Orientation = Orientation.Horizontal,
+                    VerticalAlignment = VerticalAlignment.Center 
+                };
 
                 var brandDarkBrush = new SolidColorBrush(Color.FromRgb(0x1C, 0x1B, 0x1F));
 
-                // Modified dot / icon
+                // Tab Title Text
                 var titleText = new TextBlock
                 {
                     Text = doc.DisplayTitle,
@@ -173,7 +186,8 @@ namespace NotepadByFerryPot
                         ? brandDarkBrush 
                         : (Brush)FindResource("MaterialDesignBody"),
                     VerticalAlignment = VerticalAlignment.Center,
-                    Margin = new Thickness(0, 0, 8, 0)
+                    Margin = new Thickness(0, 0, 6, 0),
+                    FontSize = 12
                 };
                 sp.Children.Add(titleText);
 
@@ -186,6 +200,7 @@ namespace NotepadByFerryPot
                     Background = Brushes.Transparent,
                     BorderThickness = new Thickness(0),
                     Style = (Style)FindResource("MaterialDesignIconButton"),
+                    VerticalAlignment = VerticalAlignment.Center,
                     Tag = doc
                 };
 
@@ -217,13 +232,20 @@ namespace NotepadByFerryPot
             // Plus Button
             var addBtn = new Button
             {
-                Width = 32,
-                Height = 32,
-                Margin = new Thickness(4, 0, 0, 4),
+                Width = 28,
+                Height = 28,
+                Margin = new Thickness(2, 0, 0, 0),
                 ToolTip = "New Document (Ctrl+N)",
-                Style = (Style)FindResource("MaterialDesignIconButton")
+                Style = (Style)FindResource("MaterialDesignIconButton"),
+                VerticalAlignment = VerticalAlignment.Center
             };
-            var addIcon = new PackIcon { Kind = PackIconKind.Plus, Width = 18, Height = 18 };
+            var addIcon = new PackIcon 
+            { 
+                Kind = PackIconKind.Plus, 
+                Width = 16, 
+                Height = 16,
+                Foreground = (Brush)FindResource("MaterialDesignBody")
+            };
             addBtn.Content = addIcon;
             addBtn.Click += (s, e) => CreateNewTab();
 
@@ -713,6 +735,31 @@ namespace NotepadByFerryPot
 
         private void ClearFormatting_Click(object sender, RoutedEventArgs e) => ActiveEditor.ClearFormatting();
 
+        private void OverflowToolbar_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.ContextMenu != null)
+            {
+                btn.ContextMenu.PlacementTarget = btn;
+                btn.ContextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+                btn.ContextMenu.IsOpen = true;
+            }
+        }
+
+        private void MainWindow_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            UpdateToolbarResponsiveLayout();
+        }
+
+        private void UpdateToolbarResponsiveLayout()
+        {
+            if (FullToolbarPanel == null || OverflowToolbarButton == null) return;
+
+            // When window width is narrow (< 820px), collapse full toolbar and show "..." overflow button
+            bool isNarrow = ActualWidth < 820;
+            FullToolbarPanel.Visibility = isNarrow ? Visibility.Collapsed : Visibility.Visible;
+            OverflowToolbarButton.Visibility = isNarrow ? Visibility.Visible : Visibility.Collapsed;
+        }
+
         #endregion
 
         #region View Mode Handlers (Formatted vs Syntax View)
@@ -745,21 +792,20 @@ namespace NotepadByFerryPot
             SyntaxViewMenuItem.IsChecked = !isFormatted;
             FormattedViewMenuItem.IsChecked = isFormatted;
 
-            if (isFormatted)
+            if (StatusBarViewModeButton != null && StatusBarViewModeIcon != null && StatusBarViewModeText != null)
             {
-                ToolbarViewModeIcon.Kind = PackIconKind.LanguageMarkdown;
-                ToolbarViewModeText.Text = "Markdown syntax";
-
-                StatusBarViewModeIcon.Kind = PackIconKind.FormatLetterCase;
-                StatusBarViewModeText.Text = "Formatted";
-            }
-            else
-            {
-                ToolbarViewModeIcon.Kind = PackIconKind.FormatLetterCase;
-                ToolbarViewModeText.Text = "Formatted";
-
-                StatusBarViewModeIcon.Kind = PackIconKind.LanguageMarkdown;
-                StatusBarViewModeText.Text = "Markdown syntax";
+                if (isFormatted)
+                {
+                    StatusBarViewModeIcon.Kind = PackIconKind.FormatLetterCase;
+                    StatusBarViewModeText.Text = "Formatted";
+                    StatusBarViewModeButton.ToolTip = "Switch to Markdown syntax (Ctrl+Shift+M)";
+                }
+                else
+                {
+                    StatusBarViewModeIcon.Kind = PackIconKind.LanguageMarkdown;
+                    StatusBarViewModeText.Text = "Markdown";
+                    StatusBarViewModeButton.ToolTip = "Switch to Formatted (Ctrl+Shift+M)";
+                }
             }
 
             UpdateStatusBar();
@@ -773,7 +819,6 @@ namespace NotepadByFerryPot
 
             TopAppBarRow.Height = _isFocusMode ? new GridLength(0) : GridLength.Auto;
             TabsBarRow.Height = _isFocusMode ? new GridLength(0) : GridLength.Auto;
-            FormattingBarRow.Height = _isFocusMode ? new GridLength(0) : (SettingsService.Current.ShowFormattingToolbar ? GridLength.Auto : new GridLength(0));
             StatusBarRow.Height = _isFocusMode ? new GridLength(0) : (SettingsService.Current.ShowStatusBar ? GridLength.Auto : new GridLength(0));
 
             WindowState = _isFocusMode ? WindowState.Maximized : WindowState.Normal;
