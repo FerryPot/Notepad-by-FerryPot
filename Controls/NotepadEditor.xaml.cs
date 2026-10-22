@@ -211,6 +211,7 @@ namespace NotepadByFerryPot.Controls
                 MainTextBox.Focus();
                 MainTextBox_SelectionChanged(this, new RoutedEventArgs());
             }
+            NotifyFormattingStateChanged();
         }
 
         public string GetCurrentContent()
@@ -299,6 +300,7 @@ namespace NotepadByFerryPot.Controls
                 {
                     editor.MainTextBox.Text = string.Empty;
                 }
+                editor.NotifyFormattingStateChanged();
             }
         }
 
@@ -390,6 +392,7 @@ namespace NotepadByFerryPot.Controls
         private void FormattedRichTextBox_SelectionChanged(object sender, RoutedEventArgs e)
         {
             UpdateStatusFromFormatted();
+            NotifyFormattingStateChanged();
         }
 
         private void FormattedRichTextBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -656,7 +659,6 @@ namespace NotepadByFerryPot.Controls
         {
             if (_isFormattedView)
             {
-                EnsureWordSelectionIfEmpty();
                 if (prefix == "**")
                 {
                     EditingCommands.ToggleBold.Execute(null, FormattedRichTextBox);
@@ -674,7 +676,18 @@ namespace NotepadByFerryPot.Controls
                 {
                     var range = FormattedRichTextBox.Selection;
                     var decs = range.GetPropertyValue(Inline.TextDecorationsProperty) as TextDecorationCollection;
-                    bool hasStrike = decs != null && decs.Count > 0;
+                    bool hasStrike = false;
+                    if (decs != null && decs.Count > 0)
+                    {
+                        foreach (var dec in decs)
+                        {
+                            if (dec.Location == TextDecorationLocation.Strikethrough)
+                            {
+                                hasStrike = true;
+                                break;
+                            }
+                        }
+                    }
                     if (hasStrike)
                         range.ApplyPropertyValue(Inline.TextDecorationsProperty, null);
                     else
@@ -695,6 +708,7 @@ namespace NotepadByFerryPot.Controls
                         range.ApplyPropertyValue(TextElement.BackgroundProperty, new SolidColorBrush(Color.FromArgb(40, 128, 128, 128)));
                     }
                 }
+                NotifyFormattingStateChanged();
                 FormattedRichTextBox.Focus();
                 return;
             }
@@ -849,6 +863,7 @@ namespace NotepadByFerryPot.Controls
                         }
                     }
                 }
+                NotifyFormattingStateChanged();
                 FormattedRichTextBox.Focus();
                 return;
             }
@@ -896,6 +911,7 @@ namespace NotepadByFerryPot.Controls
                 {
                     EditingCommands.ToggleBullets.Execute(null, FormattedRichTextBox);
                 }
+                NotifyFormattingStateChanged();
                 FormattedRichTextBox.Focus();
                 return;
             }
@@ -1090,6 +1106,7 @@ namespace NotepadByFerryPot.Controls
                     p.FontWeight = FontWeights.Normal;
                     p.BorderThickness = new Thickness(0);
                 }
+                NotifyFormattingStateChanged();
                 FormattedRichTextBox.Focus();
                 return;
             }
@@ -1174,5 +1191,94 @@ namespace NotepadByFerryPot.Controls
             }
             return null;
         }
+
+        #region Formatting State Query and Events
+
+        public event EventHandler<EditorFormattingState>? FormattingStateChanged;
+
+        public EditorFormattingState GetCurrentFormattingState()
+        {
+            var state = new EditorFormattingState();
+            if (!_isFormattedView || FormattedRichTextBox == null || FormattedRichTextBox.Document == null)
+            {
+                return state;
+            }
+
+            try
+            {
+                var sel = FormattedRichTextBox.Selection;
+                if (sel != null)
+                {
+                    object weight = sel.GetPropertyValue(TextElement.FontWeightProperty);
+                    state.IsBold = weight is FontWeight fw && (fw == FontWeights.Bold || fw == FontWeights.SemiBold || fw == FontWeights.ExtraBold || fw == FontWeights.Black);
+
+                    object style = sel.GetPropertyValue(TextElement.FontStyleProperty);
+                    state.IsItalic = style is FontStyle fs && (fs == FontStyles.Italic || fs == FontStyles.Oblique);
+
+                    object decs = sel.GetPropertyValue(Inline.TextDecorationsProperty);
+                    if (decs is TextDecorationCollection tdc && tdc.Count > 0)
+                    {
+                        foreach (var dec in tdc)
+                        {
+                            if (dec.Location == TextDecorationLocation.Strikethrough)
+                            {
+                                state.IsStrikethrough = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    var caret = FormattedRichTextBox.CaretPosition ?? sel.Start;
+                    if (caret != null)
+                    {
+                        var p = caret.Paragraph;
+                        if (p != null && p.Tag is string tag && System.Text.RegularExpressions.Regex.IsMatch(tag, @"^h[1-6]$", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                        {
+                            state.Heading = tag.ToUpper();
+                        }
+                        else
+                        {
+                            state.Heading = "Normal";
+                        }
+
+                        DependencyObject? current = p ?? (DependencyObject)caret.Parent;
+                        while (current != null && !(current is FlowDocument))
+                        {
+                            if (current is ListItem || current is System.Windows.Documents.List)
+                            {
+                                state.IsList = true;
+                                break;
+                            }
+                            if (current is FrameworkContentElement fce)
+                                current = fce.Parent;
+                            else if (current is FrameworkElement fe)
+                                current = fe.Parent;
+                            else
+                                current = LogicalTreeHelper.GetParent(current);
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            return state;
+        }
+
+        public void NotifyFormattingStateChanged()
+        {
+            var state = GetCurrentFormattingState();
+            FormattingStateChanged?.Invoke(this, state);
+        }
+
+        #endregion
+    }
+
+    public class EditorFormattingState
+    {
+        public bool IsBold { get; set; }
+        public bool IsItalic { get; set; }
+        public bool IsStrikethrough { get; set; }
+        public string Heading { get; set; } = "Normal";
+        public bool IsList { get; set; }
     }
 }

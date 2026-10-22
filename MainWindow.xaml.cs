@@ -40,6 +40,8 @@ namespace NotepadByFerryPot
             ApplySettingsToWindow();
             UpdateViewModeUI();
             UpdateToolbarResponsiveLayout();
+            ActiveEditor.FormattingStateChanged += (s, state) => UpdateFormattingToolbarState(state);
+            UpdateFormattingToolbarState(ActiveEditor?.GetCurrentFormattingState());
         }
 
         public void ApplySettingsToWindow()
@@ -59,6 +61,7 @@ namespace NotepadByFerryPot
             }
 
             ActiveEditor.ApplySettings();
+            UpdateFormattingToolbarState(ActiveEditor?.GetCurrentFormattingState());
         }
 
         #region Tab Management
@@ -97,6 +100,7 @@ namespace NotepadByFerryPot
             UpdateTitle();
             UpdateStatusBar();
             RebuildTabsUI();
+            UpdateFormattingToolbarState(ActiveEditor?.GetCurrentFormattingState());
         }
 
         private void RebuildTabsUI()
@@ -760,6 +764,83 @@ namespace NotepadByFerryPot
             OverflowToolbarButton.Visibility = isNarrow ? Visibility.Visible : Visibility.Collapsed;
         }
 
+        private void UpdateFormattingToolbarState(EditorFormattingState? state)
+        {
+            if (BoldToolbarButton == null || ItalicToolbarButton == null || StrikethroughToolbarButton == null ||
+                HeadingDropdownButton == null || ListDropdownButton == null)
+            {
+                return;
+            }
+
+            state ??= new EditorFormattingState();
+
+            // Accent brush (Amber)
+            Brush primaryBrush;
+            try
+            {
+                primaryBrush = (Brush)FindResource("MaterialDesign.Brush.Primary");
+            }
+            catch
+            {
+                primaryBrush = new SolidColorBrush(Color.FromRgb(255, 193, 7));
+            }
+
+            // Normal text color (body)
+            Brush bodyBrush;
+            try
+            {
+                bodyBrush = (Brush)FindResource("MaterialDesignBody");
+            }
+            catch
+            {
+                bodyBrush = Brushes.Gray;
+            }
+
+            // Filled rounded background using the theme accent color (amber) at low opacity
+            bool isDark = SettingsService.Current.BaseTheme == BaseTheme.Dark;
+            Brush highlightBackground;
+            Brush activeIconBrush;
+
+            if (isDark)
+            {
+                // Dark and AMOLED themes: ~22% amber background, vibrant amber icon
+                highlightBackground = new SolidColorBrush(Color.FromArgb(56, 255, 193, 7));
+                activeIconBrush = primaryBrush;
+            }
+            else
+            {
+                // Light theme: ~20% amber background, high-contrast rich amber icon for crisp readability
+                highlightBackground = new SolidColorBrush(Color.FromArgb(48, 255, 193, 7));
+                activeIconBrush = new SolidColorBrush(Color.FromRgb(196, 125, 0));
+            }
+            highlightBackground.Freeze();
+            if (activeIconBrush.CanFreeze) activeIconBrush.Freeze();
+
+            // Bold
+            BoldToolbarButton.Background = state.IsBold ? highlightBackground : Brushes.Transparent;
+            BoldToolbarText.Foreground = state.IsBold ? activeIconBrush : bodyBrush;
+
+            // Italic
+            ItalicToolbarButton.Background = state.IsItalic ? highlightBackground : Brushes.Transparent;
+            ItalicToolbarText.Foreground = state.IsItalic ? activeIconBrush : bodyBrush;
+
+            // Strikethrough
+            StrikethroughToolbarButton.Background = state.IsStrikethrough ? highlightBackground : Brushes.Transparent;
+            StrikethroughToolbarText.Foreground = state.IsStrikethrough ? activeIconBrush : bodyBrush;
+
+            // Heading Dropdown
+            HeadingDropdownText.Text = state.Heading;
+            bool isHeading = state.Heading != "Normal";
+            HeadingDropdownButton.Background = isHeading ? highlightBackground : Brushes.Transparent;
+            HeadingDropdownText.Foreground = isHeading ? activeIconBrush : bodyBrush;
+            HeadingDropdownChevron.Foreground = isHeading ? activeIconBrush : bodyBrush;
+
+            // List Dropdown
+            ListDropdownButton.Background = state.IsList ? highlightBackground : Brushes.Transparent;
+            ListDropdownIcon.Foreground = state.IsList ? activeIconBrush : bodyBrush;
+            ListDropdownChevron.Foreground = state.IsList ? activeIconBrush : bodyBrush;
+        }
+
         #endregion
 
         #region View Mode Handlers (Formatted vs Syntax View)
@@ -783,6 +864,7 @@ namespace NotepadByFerryPot
         {
             ActiveEditor.SetViewMode(formatted);
             UpdateViewModeUI();
+            UpdateFormattingToolbarState(ActiveEditor?.GetCurrentFormattingState());
         }
 
         private void UpdateViewModeUI()
