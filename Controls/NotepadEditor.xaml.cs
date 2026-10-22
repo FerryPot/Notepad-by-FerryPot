@@ -108,6 +108,26 @@ namespace NotepadByFerryPot.Controls
             set => SetViewMode(value);
         }
 
+        public static FontFamily GetFormattedFontFamily(string? settingsFontFamily)
+        {
+            if (string.IsNullOrWhiteSpace(settingsFontFamily))
+                return new FontFamily("Segoe UI");
+
+            var monospaceFonts = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "Consolas", "Cascadia Code", "Cascadia Mono", "Courier New", 
+                "Courier", "Lucida Console", "Lucida Sans Typewriter", 
+                "Fira Code", "JetBrains Mono", "Inconsolata", "Source Code Pro", "Monospace"
+            };
+
+            if (monospaceFonts.Contains(settingsFontFamily.Trim()))
+            {
+                return new FontFamily("Segoe UI");
+            }
+
+            return new FontFamily(settingsFontFamily);
+        }
+
         public void SetViewMode(bool formatted)
         {
             if (_isFormattedView == formatted) return;
@@ -121,14 +141,22 @@ namespace NotepadByFerryPot.Controls
                     try
                     {
                         var brush = (Brush)Application.Current.FindResource("MaterialDesignBody");
-                        var ff = new FontFamily(SettingsService.Current.FontFamilyName);
+                        var ff = GetFormattedFontFamily(SettingsService.Current.FontFamilyName);
                         var doc = MarkdownParserService.ParseToFlowDocument(MainTextBox.Text, ff, SettingsService.Current.FontSize, brush);
                         FormattedRichTextBox.Document = doc;
                         _lastSyncedSyntaxText = MainTextBox.Text;
                     }
                     catch
                     {
-                        var doc = new FlowDocument(new Paragraph(new Run(MainTextBox.Text)));
+                        var ff = GetFormattedFontFamily(SettingsService.Current.FontFamilyName);
+                        var doc = new FlowDocument(new Paragraph(new Run(MainTextBox.Text)))
+                        {
+                            PagePadding = new Thickness(0),
+                            FontFamily = ff,
+                            FontSize = SettingsService.Current.FontSize,
+                            TextAlignment = TextAlignment.Left
+                        };
+                        doc.SetResourceReference(FlowDocument.ForegroundProperty, "MaterialDesignBody");
                         FormattedRichTextBox.Document = doc;
                         _lastSyncedSyntaxText = MainTextBox.Text;
                     }
@@ -209,14 +237,22 @@ namespace NotepadByFerryPot.Controls
                 try
                 {
                     var brush = (Brush)Application.Current.FindResource("MaterialDesignBody");
-                    var ff = new FontFamily(SettingsService.Current.FontFamilyName);
+                    var ff = GetFormattedFontFamily(SettingsService.Current.FontFamilyName);
                     var doc = MarkdownParserService.ParseToFlowDocument(MainTextBox.Text, ff, SettingsService.Current.FontSize, brush);
                     FormattedRichTextBox.Document = doc;
                     _lastSyncedSyntaxText = MainTextBox.Text;
                 }
                 catch
                 {
-                    var doc = new FlowDocument(new Paragraph(new Run(MainTextBox.Text)));
+                    var ff = GetFormattedFontFamily(SettingsService.Current.FontFamilyName);
+                    var doc = new FlowDocument(new Paragraph(new Run(MainTextBox.Text)))
+                    {
+                        PagePadding = new Thickness(0),
+                        FontFamily = ff,
+                        FontSize = SettingsService.Current.FontSize,
+                        TextAlignment = TextAlignment.Left
+                    };
+                    doc.SetResourceReference(FlowDocument.ForegroundProperty, "MaterialDesignBody");
                     FormattedRichTextBox.Document = doc;
                     _lastSyncedSyntaxText = MainTextBox.Text;
                 }
@@ -288,6 +324,7 @@ namespace NotepadByFerryPot.Controls
         {
             var settings = SettingsService.Current;
 
+            // Syntax View font (stays monospace unless user chose something else)
             MainTextBox.FontFamily = new FontFamily(settings.FontFamilyName);
             MainTextBox.FontSize = settings.FontSize;
             MainTextBox.FontWeight = settings.FontWeightName switch
@@ -301,6 +338,17 @@ namespace NotepadByFerryPot.Controls
 
             LineNumbersColumn.Width = settings.ShowLineNumbers ? GridLength.Auto : new GridLength(0);
             LineNumbersBorder.Visibility = settings.ShowLineNumbers ? Visibility.Visible : Visibility.Collapsed;
+
+            // Formatted View font (proportional font: Segoe UI or chosen proportional font)
+            var formattedFont = GetFormattedFontFamily(settings.FontFamilyName);
+            FormattedRichTextBox.FontFamily = formattedFont;
+            FormattedRichTextBox.FontSize = settings.FontSize;
+            if (FormattedRichTextBox.Document != null)
+            {
+                FormattedRichTextBox.Document.FontFamily = formattedFont;
+                FormattedRichTextBox.Document.FontSize = settings.FontSize;
+                FormattedRichTextBox.Document.SetResourceReference(FlowDocument.ForegroundProperty, "MaterialDesignBody");
+            }
 
             UpdateLineNumbers();
         }

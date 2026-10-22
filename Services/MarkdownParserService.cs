@@ -17,17 +17,18 @@ namespace NotepadByFerryPot.Services
         {
             var doc = new FlowDocument
             {
-                PagePadding = new Thickness(24, 16, 24, 24),
+                PagePadding = new Thickness(0),
                 FontFamily = fontFamily,
                 FontSize = baseFontSize,
-                Foreground = foreground,
                 LineHeight = baseFontSize * 1.5,
-                IsOptimalParagraphEnabled = true
+                IsOptimalParagraphEnabled = true,
+                TextAlignment = TextAlignment.Left
             };
+            doc.SetResourceReference(FlowDocument.ForegroundProperty, "MaterialDesignBody");
 
             if (string.IsNullOrEmpty(markdown))
             {
-                doc.Blocks.Add(new Paragraph(new Run(string.Empty)));
+                doc.Blocks.Add(new Paragraph(new Run(string.Empty)) { Margin = new Thickness(0) });
                 return doc;
             }
 
@@ -650,21 +651,23 @@ namespace NotepadByFerryPot.Services
                 BorderThickness = new Thickness(4, 0, 0, 0),
                 Padding = new Thickness(14, 8, 14, 8),
                 Margin = new Thickness(0, 8, 0, 12),
-                CornerRadius = new CornerRadius(0, 4, 4, 0),
-                Child = new TextBlock
-                {
-                    Text = text,
-                    FontStyle = FontStyles.Italic,
-                    Foreground = foreground,
-                    TextWrapping = TextWrapping.Wrap,
-                    FontSize = baseFontSize
-                }
+                CornerRadius = new CornerRadius(0, 4, 4, 0)
             };
+
+            var tb = new TextBlock
+            {
+                Text = text,
+                FontStyle = FontStyles.Italic,
+                TextWrapping = TextWrapping.Wrap,
+                FontSize = baseFontSize
+            };
+            tb.SetResourceReference(TextBlock.ForegroundProperty, "MaterialDesignBody");
+            border.Child = tb;
 
             try
             {
-                border.BorderBrush = (Brush)Application.Current.FindResource("MaterialDesign.Brush.Primary");
-                border.Background = (Brush)Application.Current.FindResource("MaterialDesignCardBackground");
+                border.SetResourceReference(Border.BorderBrushProperty, "MaterialDesign.Brush.Primary");
+                border.SetResourceReference(Border.BackgroundProperty, "MaterialDesignCardBackground");
             }
             catch { }
 
@@ -734,8 +737,7 @@ namespace NotepadByFerryPot.Services
             {
                 FontSize = size,
                 FontWeight = level <= 2 ? FontWeights.Bold : FontWeights.SemiBold,
-                Foreground = foreground,
-                Margin = new Thickness(0, baseFontSize * (level == 1 ? 1.2 : 0.8), 0, baseFontSize * 0.4),
+                Margin = new Thickness(0, baseFontSize * (level == 1 ? 0.6 : 0.4), 0, baseFontSize * 0.4),
                 Tag = "h" + level
             };
             AddFormattedInlines(p, text, foreground);
@@ -744,7 +746,7 @@ namespace NotepadByFerryPot.Services
             {
                 try
                 {
-                    p.BorderBrush = (Brush)Application.Current.FindResource("MaterialDesignDivider");
+                    p.SetResourceReference(Block.BorderBrushProperty, "MaterialDesignDivider");
                     p.BorderThickness = new Thickness(0, 0, 0, 1);
                     p.Padding = new Thickness(0, 0, 0, 6);
                 }
