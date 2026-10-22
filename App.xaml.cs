@@ -1,5 +1,6 @@
 using System;
 using System.Windows;
+using NotepadByFerryPot.Views;
 
 namespace NotepadByFerryPot
 {
@@ -11,11 +12,7 @@ namespace NotepadByFerryPot
 
             DispatcherUnhandledException += (s, args) =>
             {
-                MessageBox.Show(
-                    $"An unexpected error occurred:\n\n{args.Exception.Message}\n\n{args.Exception.StackTrace}",
-                    "Notepad by FerryPot - Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                CrashReportWindow.ShowCrash("DispatcherUnhandledException", args.Exception, isFatal: false);
                 args.Handled = true;
             };
 
@@ -23,11 +20,7 @@ namespace NotepadByFerryPot
             {
                 if (args.ExceptionObject is Exception ex)
                 {
-                    MessageBox.Show(
-                        $"A fatal error occurred:\n\n{ex.Message}\n\n{ex.StackTrace}",
-                        "Notepad by FerryPot - Fatal Error",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Error);
+                    CrashReportWindow.ShowCrash("AppDomain.UnhandledException", ex, isFatal: true);
                 }
             };
         }

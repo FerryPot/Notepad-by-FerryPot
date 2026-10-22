@@ -1,11 +1,82 @@
 using System;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Windows;
 using MaterialDesignColors;
 using MaterialDesignThemes.Wpf;
 
 namespace NotepadByFerryPot.Services
 {
+    public class SafeBaseThemeConverter : JsonConverter<BaseTheme>
+    {
+        public override BaseTheme Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            if (reader.TokenType == JsonTokenType.String)
+            {
+                string? str = reader.GetString();
+                if (!string.IsNullOrWhiteSpace(str))
+                {
+                    if (str.Equals("System", StringComparison.OrdinalIgnoreCase))
+                        return BaseTheme.Inherit;
+                    if (Enum.TryParse<BaseTheme>(str, true, out var parsed) && Enum.IsDefined(typeof(BaseTheme), parsed))
+                        return parsed;
+                }
+                return BaseTheme.Inherit;
+            }
+
+            if (reader.TokenType == JsonTokenType.Number && reader.TryGetInt32(out int intVal))
+            {
+                if (Enum.IsDefined(typeof(BaseTheme), (BaseTheme)intVal))
+                {
+                    return (BaseTheme)intVal;
+                }
+                return BaseTheme.Inherit;
+            }
+
+            return BaseTheme.Inherit;
+        }
+
+        public override void Write(Utf8JsonWriter writer, BaseTheme value, JsonSerializerOptions options)
+        {
+            writer.WriteNumberValue((int)value);
+        }
+    }
+
+    public class SafePrimaryColorConverter : JsonConverter<PrimaryColor>
+    {
+        public override PrimaryColor Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            if (reader.TokenType == JsonTokenType.String)
+            {
+                string? str = reader.GetString();
+                if (!string.IsNullOrWhiteSpace(str) &&
+                    Enum.TryParse<PrimaryColor>(str, true, out var parsed) &&
+                    Enum.IsDefined(typeof(PrimaryColor), parsed))
+                {
+                    return parsed;
+                }
+                return PrimaryColor.Amber;
+            }
+
+            if (reader.TokenType == JsonTokenType.Number && reader.TryGetInt32(out int intVal))
+            {
+                if (Enum.IsDefined(typeof(PrimaryColor), (PrimaryColor)intVal))
+                {
+                    return (PrimaryColor)intVal;
+                }
+                return PrimaryColor.Amber;
+            }
+
+            return PrimaryColor.Amber;
+        }
+
+        public override void Write(Utf8JsonWriter writer, PrimaryColor value, JsonSerializerOptions options)
+        {
+            writer.WriteNumberValue((int)value);
+        }
+    }
+
     public class AppSettings
     {
         public BaseTheme BaseTheme { get; set; } = BaseTheme.Inherit;
@@ -25,6 +96,49 @@ namespace NotepadByFerryPot.Services
         public bool FocusMode { get; set; } = false;
         public double ZoomLevel { get; set; } = 100.0;
         public bool ShowFormattingToolbar { get; set; } = true;
+
+        public void ValidateAndClamp()
+        {
+            if (!Enum.IsDefined(typeof(BaseTheme), BaseTheme))
+            {
+                BaseTheme = BaseTheme.Inherit;
+            }
+
+            if (!Enum.IsDefined(typeof(PrimaryColor), PrimaryColor))
+            {
+                PrimaryColor = PrimaryColor.Amber;
+            }
+
+            if (string.IsNullOrWhiteSpace(FontFamilyName))
+            {
+                FontFamilyName = "Consolas";
+            }
+
+            if (string.IsNullOrWhiteSpace(FontWeightName))
+            {
+                FontWeightName = "Normal";
+            }
+
+            if (double.IsNaN(FontSize) || double.IsInfinity(FontSize))
+            {
+                FontSize = 15.0;
+            }
+            else
+            {
+                FontSize = Math.Clamp(FontSize, 8.0, 72.0);
+            }
+
+            TabSize = Math.Clamp(TabSize, 1, 16);
+
+            if (double.IsNaN(ZoomLevel) || double.IsInfinity(ZoomLevel))
+            {
+                ZoomLevel = 100.0;
+            }
+            else
+            {
+                ZoomLevel = Math.Clamp(ZoomLevel, 10.0, 500.0);
+            }
+        }
     }
 
     public static class SettingsService
@@ -35,6 +149,17 @@ namespace NotepadByFerryPot.Services
         );
         private static readonly string SettingsFilePath = Path.Combine(SettingsDir, "settings.json");
 
+        private static readonly JsonSerializerOptions JsonOptions = new()
+        {
+            WriteIndented = true,
+            PropertyNameCaseInsensitive = true,
+            Converters =
+            {
+                new SafeBaseThemeConverter(),
+                new SafePrimaryColorConverter()
+            }
+        };
+
         public static AppSettings Current { get; private set; } = new();
 
         public static void Load()
@@ -44,26 +169,43 @@ namespace NotepadByFerryPot.Services
                 if (File.Exists(SettingsFilePath))
                 {
                     var json = File.ReadAllText(SettingsFilePath);
-                    Current = JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
+                    Current = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions) ?? new AppSettings();
+                }
+                else
+                {
+                    Current = new AppSettings();
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                CrashLogService.LogError("SettingsService.Load", ex);
                 Current = new AppSettings();
+            }
+            finally
+            {
+                Current.ValidateAndClamp();
             }
         }
 
-        public static void Save()
+        public static bool Save()
         {
             try
             {
+                Current.ValidateAndClamp();
                 Directory.CreateDirectory(SettingsDir);
-                var json = JsonSerializer.Serialize(Current, new JsonSerializerOptions { WriteIndented = true });
+                var json = JsonSerializer.Serialize(Current, JsonOptions);
                 File.WriteAllText(SettingsFilePath, json);
+                return true;
             }
-            catch
+            catch (Exception ex)
             {
-                // Ignore persistence errors
+                string logPath = CrashLogService.LogError("SettingsService.Save", ex);
+                MessageBox.Show(
+                    $"Unable to save application settings: {ex.Message}\n\nDetails logged to:\n{logPath}",
+                    "Settings Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
             }
         }
     }
