@@ -101,6 +101,22 @@ namespace NotepadByFerryPot.Controls
             }
         }
 
+        public static readonly Thickness EditorPadding = new Thickness(32, 24, 32, 24);
+
+        public void ApplyDocumentPadding(FlowDocument? doc)
+        {
+            if (doc == null) return;
+            doc.PagePadding = EditorPadding;
+            if (doc.Blocks.FirstBlock != null)
+            {
+                var m = doc.Blocks.FirstBlock.Margin;
+                if (m.Top > 0)
+                {
+                    doc.Blocks.FirstBlock.Margin = new Thickness(m.Left, 0, m.Right, m.Bottom);
+                }
+            }
+        }
+
         private bool _isFormattedView = true;
         private bool _hasInitializedViewMode = false;
         public bool IsFormattedView
@@ -146,6 +162,7 @@ namespace NotepadByFerryPot.Controls
                         var ff = GetFormattedFontFamily(SettingsService.Current.FontFamilyName);
                         var doc = MarkdownParserService.ParseToFlowDocument(MainTextBox.Text, ff, SettingsService.Current.FontSize, brush);
                         FormattedRichTextBox.Document = doc;
+                        ApplyDocumentPadding(FormattedRichTextBox.Document);
                         _lastSyncedSyntaxText = MainTextBox.Text;
                     }
                     catch
@@ -153,13 +170,14 @@ namespace NotepadByFerryPot.Controls
                         var ff = GetFormattedFontFamily(SettingsService.Current.FontFamilyName);
                         var doc = new FlowDocument(new Paragraph(new Run(MainTextBox.Text)) { Margin = new Thickness(0) })
                         {
-                            PagePadding = new Thickness(24, 20, 24, 20),
+                            PagePadding = EditorPadding,
                             FontFamily = ff,
                             FontSize = SettingsService.Current.FontSize,
                             TextAlignment = TextAlignment.Left
                         };
                         doc.SetResourceReference(FlowDocument.ForegroundProperty, "MaterialDesignBody");
                         FormattedRichTextBox.Document = doc;
+                        ApplyDocumentPadding(FormattedRichTextBox.Document);
                         _lastSyncedSyntaxText = MainTextBox.Text;
                     }
                 }
@@ -243,6 +261,7 @@ namespace NotepadByFerryPot.Controls
                     var ff = GetFormattedFontFamily(SettingsService.Current.FontFamilyName);
                     var doc = MarkdownParserService.ParseToFlowDocument(MainTextBox.Text, ff, SettingsService.Current.FontSize, brush);
                     FormattedRichTextBox.Document = doc;
+                    ApplyDocumentPadding(FormattedRichTextBox.Document);
                     _lastSyncedSyntaxText = MainTextBox.Text;
                 }
                 catch
@@ -250,13 +269,14 @@ namespace NotepadByFerryPot.Controls
                     var ff = GetFormattedFontFamily(SettingsService.Current.FontFamilyName);
                     var doc = new FlowDocument(new Paragraph(new Run(MainTextBox.Text)) { Margin = new Thickness(0) })
                     {
-                        PagePadding = new Thickness(24, 20, 24, 20),
+                        PagePadding = EditorPadding,
                         FontFamily = ff,
                         FontSize = SettingsService.Current.FontSize,
                         TextAlignment = TextAlignment.Left
                     };
                     doc.SetResourceReference(FlowDocument.ForegroundProperty, "MaterialDesignBody");
                     FormattedRichTextBox.Document = doc;
+                    ApplyDocumentPadding(FormattedRichTextBox.Document);
                     _lastSyncedSyntaxText = MainTextBox.Text;
                 }
             }
@@ -276,6 +296,10 @@ namespace NotepadByFerryPot.Controls
             {
                 _mainScrollViewer.ScrollChanged += MainScrollViewer_ScrollChanged;
             }
+            FormattedRichTextBox.Padding = EditorPadding;
+            MainTextBox.Padding = EditorPadding;
+            LineNumbersBorder.Padding = new Thickness(8, EditorPadding.Top, 8, EditorPadding.Bottom);
+            ApplyDocumentPadding(FormattedRichTextBox.Document);
             ApplySettings();
         }
 
@@ -347,11 +371,16 @@ namespace NotepadByFerryPot.Controls
             var formattedFont = GetFormattedFontFamily(settings.FontFamilyName);
             FormattedRichTextBox.FontFamily = formattedFont;
             FormattedRichTextBox.FontSize = settings.FontSize;
+            FormattedRichTextBox.Padding = EditorPadding;
+            MainTextBox.Padding = EditorPadding;
+            LineNumbersBorder.Padding = new Thickness(8, EditorPadding.Top, 8, EditorPadding.Bottom);
+
             if (FormattedRichTextBox.Document != null)
             {
                 FormattedRichTextBox.Document.FontFamily = formattedFont;
                 FormattedRichTextBox.Document.FontSize = settings.FontSize;
                 FormattedRichTextBox.Document.SetResourceReference(FlowDocument.ForegroundProperty, "MaterialDesignBody");
+                ApplyDocumentPadding(FormattedRichTextBox.Document);
             }
 
             UpdateLineNumbers();

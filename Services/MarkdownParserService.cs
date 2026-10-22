@@ -17,7 +17,7 @@ namespace NotepadByFerryPot.Services
         {
             var doc = new FlowDocument
             {
-                PagePadding = new Thickness(24, 20, 24, 20),
+                PagePadding = new Thickness(32, 24, 32, 24),
                 FontFamily = fontFamily,
                 FontSize = baseFontSize,
                 LineHeight = baseFontSize * 1.5,
@@ -160,6 +160,15 @@ namespace NotepadByFerryPot.Services
                 }
 
                 doc.Blocks.Add(CreateParagraph(string.Join(" ", pLines), baseFontSize, foreground));
+            }
+
+            if (doc.Blocks.FirstBlock != null)
+            {
+                var m = doc.Blocks.FirstBlock.Margin;
+                if (m.Top > 0)
+                {
+                    doc.Blocks.FirstBlock.Margin = new Thickness(m.Left, 0, m.Right, m.Bottom);
+                }
             }
 
             return doc;

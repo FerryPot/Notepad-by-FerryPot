@@ -25,7 +25,7 @@
                     Background="{DynamicResource MaterialDesignCardBackground}"
                     BorderBrush="{DynamicResource MaterialDesignDivider}"
                     BorderThickness="0,0,1,0"
-                    Padding="8,20,8,20"
+                    Padding="8,24,8,24"
                     VerticalAlignment="Stretch"
                     x:Name="LineNumbersBorder">
                 <ScrollViewer x:Name="LineNumbersScrollViewer"
@@ -53,7 +53,7 @@
                      VerticalScrollBarVisibility="Auto"
                      HorizontalScrollBarVisibility="Auto"
                      BorderThickness="0"
-                     Padding="24,20,24,20"
+                     Padding="32,24,32,24"
                      VerticalContentAlignment="Top"
                      HorizontalContentAlignment="Left"
                      VerticalAlignment="Stretch"
@@ -83,7 +83,7 @@
                      VerticalScrollBarVisibility="Auto"
                      HorizontalScrollBarVisibility="Disabled"
                      BorderThickness="0"
-                     Padding="0"
+                     Padding="32,24,32,24"
                      VerticalContentAlignment="Top"
                      HorizontalContentAlignment="Left"
                      VerticalAlignment="Stretch"
@@ -104,12 +104,12 @@
                      PreviewMouseLeftButtonDown="FormattedRichTextBox_PreviewMouseLeftButtonDown">
             <RichTextBox.Resources>
                 <Style TargetType="{x:Type FlowDocument}">
-                    <Setter Property="PagePadding" Value="24,20,24,20" />
+                    <Setter Property="PagePadding" Value="32,24,32,24" />
                     <Setter Property="TextAlignment" Value="Left" />
                 </Style>
             </RichTextBox.Resources>
             <FlowDocument x:Name="FormattedFlowDocument" 
-                          PagePadding="24,20,24,20" 
+                          PagePadding="32,24,32,24" 
                           TextAlignment="Left"
                           FontFamily="Segoe UI" 
                           FontSize="15"
