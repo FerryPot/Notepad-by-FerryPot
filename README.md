@@ -2,6 +2,7 @@
 
 A tabbed Windows text and Markdown editor inspired by Windows 11 Notepad, built with WPF, .NET 8, and Google Material Design 3.
 
+[![Build](https://github.com/FerryPot/Notepad-by-FerryPot/actions/workflows/build.yml/badge.svg)](https://github.com/FerryPot/Notepad-by-FerryPot/actions/workflows/build.yml)
 [![.NET 8](https://img.shields.io/badge/.NET-8.0%20WPF-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![Windows](https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011-0078D6?logo=windows)](https://www.microsoft.com/windows)
 [![WPF](https://img.shields.io/badge/Framework-WPF-blue)](https://github.com/dotnet/wpf)
@@ -30,8 +31,8 @@ A tabbed Windows text and Markdown editor inspired by Windows 11 Notepad, built 
 ## 📥 Download & Install
 
 ### Running the App
-1. Download the latest `NotepadByFerryPot.exe` from the root of this repository or from the [Releases](https://github.com/FerryPot/NotepadByFerryPot/releases) page.
-2. Double-click `NotepadByFerryPot.exe` to run immediately—no installer required.
+1. Download the latest release from the [Releases](https://github.com/FerryPot/Notepad-by-FerryPot/releases) page.
+2. Extract the ZIP archive or open the downloaded application to run immediately—no installer required.
 
 > **Prerequisite:** This build relies on the [.NET 8 Desktop Runtime (x64)](https://dotnet.microsoft.com/download/dotnet/8.0). If prompted, download and install the desktop runtime.
 >

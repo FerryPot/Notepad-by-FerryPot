@@ -1,0 +1,37 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & Publish Release
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publish single-file executable
+        run: dotnet publish NotepadByFerryPot.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o ./Publish
+
+      - name: Create ZIP archive
+        shell: pwsh
+        run: |
+          Compress-Archive -Path ./Publish/NotepadByFerryPot.exe -DestinationPath "NotepadByFerryPot-${{ github.ref_name }}-win-x64.zip"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: NotepadByFerryPot-${{ github.ref_name }}-win-x64.zip
+          generate_release_notes: true
