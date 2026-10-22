@@ -470,27 +470,34 @@ namespace NotepadByFerryPot.Services
                     {
                         string linkText = match.Groups["linkText"].Value;
                         string url = match.Groups["url"].Value;
-                        try
+                        if (SafeLinkService.TryNormalizeAndValidateUrl(url, out Uri? validUri))
                         {
-                            var hyperlink = new Hyperlink();
-                            if (Uri.TryCreate(url, UriKind.RelativeOrAbsolute, out var navUri))
-                            {
-                                hyperlink.NavigateUri = navUri;
-                            }
-
-                            SafeLinkService.ConfigureHyperlink(hyperlink, url);
-
                             try
                             {
-                                hyperlink.Foreground = (Brush)Application.Current.FindResource("MaterialDesign.Brush.Primary");
-                            }
-                            catch { }
+                                var hyperlink = new Hyperlink
+                                {
+                                    NavigateUri = validUri
+                                };
 
-                            AddFormattedInlinesInternal(hyperlink.Inlines, linkText, foreground);
-                            inlines.Add(hyperlink);
+                                SafeLinkService.ConfigureHyperlink(hyperlink, validUri.OriginalString);
+
+                                try
+                                {
+                                    hyperlink.Foreground = (Brush)Application.Current.FindResource("MaterialDesign.Brush.Primary");
+                                }
+                                catch { }
+
+                                AddFormattedInlinesInternal(hyperlink.Inlines, linkText, foreground);
+                                inlines.Add(hyperlink);
+                            }
+                            catch
+                            {
+                                AddFormattedInlinesInternal(inlines, linkText, foreground);
+                            }
                         }
-                        catch
+                        else
                         {
+                            // Malformed, invalid, or blocked URL: render safely as plain text
                             AddFormattedInlinesInternal(inlines, linkText, foreground);
                         }
                     }

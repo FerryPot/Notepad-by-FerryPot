@@ -983,44 +983,73 @@ namespace NotepadByFerryPot.Controls
 
         public void InsertLink()
         {
+            Window? owner = Window.GetWindow(this);
+
             if (_isFormattedView)
             {
                 string text = FormattedRichTextBox.Selection.Text;
-                if (string.IsNullOrEmpty(text)) text = "link";
+                bool hasSelection = !string.IsNullOrEmpty(text);
 
-                var hl = new Hyperlink(new Run(text))
-                {
-                    NavigateUri = new Uri("https://")
-                };
-                SafeLinkService.ConfigureHyperlink(hl, "https://");
-                try { hl.Foreground = (Brush)Application.Current.FindResource("MaterialDesign.Brush.Primary"); } catch { }
+                var dialog = new Views.LinkDialog(text, hasSelection);
+                if (owner != null) dialog.Owner = owner;
 
-                var p = FormattedRichTextBox.CaretPosition.Paragraph;
-                if (p != null)
+                if (dialog.ShowDialog() != true || dialog.ValidUri == null)
                 {
-                    FormattedRichTextBox.Selection.Text = "";
-                    p.Inlines.Add(hl);
+                    return;
                 }
+
+                string linkText = string.IsNullOrEmpty(dialog.LinkText) ? dialog.ValidUri.OriginalString : dialog.LinkText;
+                var targetUri = dialog.ValidUri;
+
+                try
+                {
+                    if (!FormattedRichTextBox.Selection.IsEmpty)
+                    {
+                        FormattedRichTextBox.Selection.Text = "";
+                    }
+
+                    var caret = FormattedRichTextBox.CaretPosition;
+                    var hl = new Hyperlink(new Run(linkText), caret)
+                    {
+                        NavigateUri = targetUri
+                    };
+
+                    SafeLinkService.ConfigureHyperlink(hl, targetUri.OriginalString);
+                    try
+                    {
+                        hl.Foreground = (Brush)Application.Current.FindResource("MaterialDesign.Brush.Primary");
+                    }
+                    catch { }
+
+                    FormattedRichTextBox.CaretPosition = hl.ElementEnd;
+                }
+                catch
+                {
+                    FormattedRichTextBox.Selection.Text = $"[{linkText}]({targetUri.OriginalString})";
+                }
+
                 FormattedRichTextBox.Focus();
                 return;
             }
 
             int selStart = MainTextBox.SelectionStart;
             int selLen = MainTextBox.SelectionLength;
+            string selText = selLen > 0 ? MainTextBox.SelectedText : "";
+            bool hasSyntaxSelection = !string.IsNullOrEmpty(selText);
 
-            if (selLen > 0)
+            var syntaxDialog = new Views.LinkDialog(selText, hasSyntaxSelection);
+            if (owner != null) syntaxDialog.Owner = owner;
+
+            if (syntaxDialog.ShowDialog() != true || syntaxDialog.ValidUri == null)
             {
-                string selText = MainTextBox.SelectedText;
-                string replacement = $"[{selText}](https://)";
-                MainTextBox.SelectedText = replacement;
-                MainTextBox.Select(selStart + selText.Length + 3, 8);
+                return;
             }
-            else
-            {
-                string template = "[link](https://)";
-                MainTextBox.SelectedText = template;
-                MainTextBox.Select(selStart + 1, 4);
-            }
+
+            string sLinkText = string.IsNullOrEmpty(syntaxDialog.LinkText) ? syntaxDialog.ValidUri.OriginalString : syntaxDialog.LinkText;
+            string replacement = $"[{sLinkText}]({syntaxDialog.ValidUri.OriginalString})";
+
+            MainTextBox.SelectedText = replacement;
+            MainTextBox.Select(selStart + replacement.Length, 0);
             MainTextBox.Focus();
         }
 
