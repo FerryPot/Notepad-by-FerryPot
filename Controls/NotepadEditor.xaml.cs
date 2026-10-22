@@ -2,6 +2,7 @@ using System;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -28,8 +29,77 @@ namespace NotepadByFerryPot.Controls
             set => SetValue(DocumentProperty, value);
         }
 
+        private string? _lastSyncedSyntaxText;
+        private bool _isSyncing = false;
+
         public TextBox EditorTextBox => MainTextBox;
         public RichTextBox RichEditor => FormattedRichTextBox;
+        public TextBoxBase ActiveInputControl => _isFormattedView ? FormattedRichTextBox : MainTextBox;
+
+        public void Undo()
+        {
+            if (_isFormattedView)
+            {
+                if (FormattedRichTextBox.CanUndo) FormattedRichTextBox.Undo();
+            }
+            else
+            {
+                if (MainTextBox.CanUndo) MainTextBox.Undo();
+            }
+        }
+
+        public void Redo()
+        {
+            if (_isFormattedView)
+            {
+                if (FormattedRichTextBox.CanRedo) FormattedRichTextBox.Redo();
+            }
+            else
+            {
+                if (MainTextBox.CanRedo) MainTextBox.Redo();
+            }
+        }
+
+        public void Cut()
+        {
+            if (_isFormattedView) FormattedRichTextBox.Cut();
+            else MainTextBox.Cut();
+        }
+
+        public void Copy()
+        {
+            if (_isFormattedView) FormattedRichTextBox.Copy();
+            else MainTextBox.Copy();
+        }
+
+        public void Paste()
+        {
+            if (_isFormattedView) FormattedRichTextBox.Paste();
+            else MainTextBox.Paste();
+        }
+
+        public void SelectAll()
+        {
+            if (_isFormattedView) FormattedRichTextBox.SelectAll();
+            else MainTextBox.SelectAll();
+        }
+
+        public void InsertText(string text)
+        {
+            if (_isFormattedView)
+            {
+                FormattedRichTextBox.Selection.Text = text;
+                FormattedRichTextBox.CaretPosition = FormattedRichTextBox.Selection.End;
+                FormattedRichTextBox.Focus();
+                UpdateStatusFromFormatted();
+            }
+            else
+            {
+                MainTextBox.SelectedText = text;
+                MainTextBox.CaretIndex += text.Length;
+                MainTextBox.Focus();
+            }
+        }
 
         private bool _isFormattedView = false;
         public bool IsFormattedView
@@ -45,10 +115,24 @@ namespace NotepadByFerryPot.Controls
             _isFormattedView = formatted;
             if (_isFormattedView)
             {
-                var brush = (Brush)Application.Current.FindResource("MaterialDesignBody");
-                var ff = new FontFamily(SettingsService.Current.FontFamilyName);
-                var doc = MarkdownParserService.ParseToFlowDocument(MainTextBox.Text, ff, SettingsService.Current.FontSize, brush);
-                FormattedRichTextBox.Document = doc;
+                // Switching from Syntax to Formatted
+                if (FormattedRichTextBox.Document == null || MainTextBox.Text != _lastSyncedSyntaxText)
+                {
+                    try
+                    {
+                        var brush = (Brush)Application.Current.FindResource("MaterialDesignBody");
+                        var ff = new FontFamily(SettingsService.Current.FontFamilyName);
+                        var doc = MarkdownParserService.ParseToFlowDocument(MainTextBox.Text, ff, SettingsService.Current.FontSize, brush);
+                        FormattedRichTextBox.Document = doc;
+                        _lastSyncedSyntaxText = MainTextBox.Text;
+                    }
+                    catch
+                    {
+                        var doc = new FlowDocument(new Paragraph(new Run(MainTextBox.Text)));
+                        FormattedRichTextBox.Document = doc;
+                        _lastSyncedSyntaxText = MainTextBox.Text;
+                    }
+                }
 
                 SyntaxViewGrid.Visibility = Visibility.Collapsed;
                 FormattedRichTextBox.Visibility = Visibility.Visible;
@@ -57,11 +141,41 @@ namespace NotepadByFerryPot.Controls
             }
             else
             {
-                string markdown = MarkdownParserService.FlowDocumentToMarkdown(FormattedRichTextBox.Document);
-                MainTextBox.Text = markdown;
-                if (Document != null)
+                // Switching from Formatted to Syntax
+                string markdown;
+                try
                 {
-                    Document.Content = markdown;
+                    markdown = MarkdownParserService.FlowDocumentToMarkdown(FormattedRichTextBox.Document);
+                }
+                catch
+                {
+                    var range = new TextRange(FormattedRichTextBox.Document.ContentStart, FormattedRichTextBox.Document.ContentEnd);
+                    markdown = range.Text;
+                }
+
+                // If markdown equals MainTextBox.Text, preserve MainTextBox undo stack!
+                if (markdown != MainTextBox.Text)
+                {
+                    _isSyncing = true;
+                    try
+                    {
+                        MainTextBox.SelectAll();
+                        MainTextBox.SelectedText = markdown;
+                        _lastSyncedSyntaxText = markdown;
+                        if (Document != null)
+                        {
+                            Document.Content = markdown;
+                            Document.IsModified = true;
+                        }
+                    }
+                    finally
+                    {
+                        _isSyncing = false;
+                    }
+                }
+                else
+                {
+                    _lastSyncedSyntaxText = MainTextBox.Text;
                 }
 
                 SyntaxViewGrid.Visibility = Visibility.Visible;
@@ -92,10 +206,20 @@ namespace NotepadByFerryPot.Controls
         {
             if (_isFormattedView)
             {
-                var brush = (Brush)Application.Current.FindResource("MaterialDesignBody");
-                var ff = new FontFamily(SettingsService.Current.FontFamilyName);
-                var doc = MarkdownParserService.ParseToFlowDocument(MainTextBox.Text, ff, SettingsService.Current.FontSize, brush);
-                FormattedRichTextBox.Document = doc;
+                try
+                {
+                    var brush = (Brush)Application.Current.FindResource("MaterialDesignBody");
+                    var ff = new FontFamily(SettingsService.Current.FontFamilyName);
+                    var doc = MarkdownParserService.ParseToFlowDocument(MainTextBox.Text, ff, SettingsService.Current.FontSize, brush);
+                    FormattedRichTextBox.Document = doc;
+                    _lastSyncedSyntaxText = MainTextBox.Text;
+                }
+                catch
+                {
+                    var doc = new FlowDocument(new Paragraph(new Run(MainTextBox.Text)));
+                    FormattedRichTextBox.Document = doc;
+                    _lastSyncedSyntaxText = MainTextBox.Text;
+                }
             }
         }
 
@@ -144,6 +268,7 @@ namespace NotepadByFerryPot.Controls
 
         private void Doc_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
+            if (_isSyncing) return;
             if (e.PropertyName == nameof(NotepadDocument.Content) && Document != null)
             {
                 if (MainTextBox.Text != Document.Content)
@@ -190,6 +315,7 @@ namespace NotepadByFerryPot.Controls
 
         private void MainTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
+            if (_isSyncing) return;
             if (Document != null && Document.Content != MainTextBox.Text)
             {
                 Document.Content = MainTextBox.Text;

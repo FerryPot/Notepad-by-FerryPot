@@ -77,8 +77,15 @@ namespace NotepadByFerryPot
 
         private void SetActiveDocument(NotepadDocument doc)
         {
+            if (_activeDocument != null && ActiveEditor != null)
+            {
+                ActiveEditor.SyncToDocument();
+            }
             _activeDocument = doc;
-            ActiveEditor.Document = doc;
+            if (ActiveEditor != null)
+            {
+                ActiveEditor.Document = doc;
+            }
 
             UpdateTitle();
             UpdateStatusBar();
@@ -561,17 +568,17 @@ namespace NotepadByFerryPot
 
         #region Edit Commands
 
-        private void Undo_Click(object sender, RoutedEventArgs e) => ActiveEditor.EditorTextBox.Undo();
-        private void Redo_Click(object sender, RoutedEventArgs e) => ActiveEditor.EditorTextBox.Redo();
-        private void Cut_Click(object sender, RoutedEventArgs e) => ActiveEditor.EditorTextBox.Cut();
-        private void Copy_Click(object sender, RoutedEventArgs e) => ActiveEditor.EditorTextBox.Copy();
-        private void Paste_Click(object sender, RoutedEventArgs e) => ActiveEditor.EditorTextBox.Paste();
-        private void SelectAll_Click(object sender, RoutedEventArgs e) => ActiveEditor.EditorTextBox.SelectAll();
+        private void Undo_Click(object sender, RoutedEventArgs e) => ActiveEditor.Undo();
+        private void Redo_Click(object sender, RoutedEventArgs e) => ActiveEditor.Redo();
+        private void Cut_Click(object sender, RoutedEventArgs e) => ActiveEditor.Cut();
+        private void Copy_Click(object sender, RoutedEventArgs e) => ActiveEditor.Copy();
+        private void Paste_Click(object sender, RoutedEventArgs e) => ActiveEditor.Paste();
+        private void SelectAll_Click(object sender, RoutedEventArgs e) => ActiveEditor.SelectAll();
 
         private void InsertTimeDate_Click(object sender, RoutedEventArgs e)
         {
             string timeDate = DateTime.Now.ToString("h:mm tt M/d/yyyy");
-            ActiveEditor.EditorTextBox.SelectedText = timeDate;
+            ActiveEditor.InsertText(timeDate);
         }
 
         #endregion
@@ -580,7 +587,7 @@ namespace NotepadByFerryPot
 
         private void Find_Click(object sender, RoutedEventArgs e)
         {
-            var findWindow = new FindReplaceWindow(ActiveEditor.EditorTextBox)
+            var findWindow = new FindReplaceWindow(ActiveEditor)
             {
                 Owner = this
             };
