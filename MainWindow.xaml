@@ -19,13 +19,11 @@
         <Grid.RowDefinitions>
             <!-- Top App Bar / Menu (Row 0) -->
             <RowDefinition Height="Auto" x:Name="TopAppBarRow"/>
-            <!-- Tabs Bar (Row 1) -->
+            <!-- Merged Tabs and Formatting Toolbar Bar (Row 1) -->
             <RowDefinition Height="Auto" x:Name="TabsBarRow"/>
-            <!-- Formatting Toolbar (Row 2) -->
-            <RowDefinition Height="Auto" x:Name="FormattingBarRow"/>
-            <!-- Editor Body (Row 3) -->
+            <!-- Editor Body (Row 2) -->
             <RowDefinition Height="*"/>
-            <!-- Status Bar (Row 4) -->
+            <!-- Status Bar (Row 3) -->
             <RowDefinition Height="Auto" x:Name="StatusBarRow"/>
         </Grid.RowDefinitions>
 
@@ -152,6 +150,9 @@
                             <MenuItem Header="Zoom _Out" InputGestureText="Ctrl+-" Click="ZoomOut_Click"/>
                             <MenuItem Header="_Reset Zoom" InputGestureText="Ctrl+0" Click="ResetZoom_Click"/>
                             <Separator/>
+                            <MenuItem Header="_Syntax View (Raw Markdown)" x:Name="SyntaxViewMenuItem" IsCheckable="True" IsChecked="True" InputGestureText="Ctrl+Shift+M" Click="SyntaxView_Click"/>
+                            <MenuItem Header="_Formatted View (Rendered)" x:Name="FormattedViewMenuItem" IsCheckable="True" IsChecked="False" InputGestureText="Ctrl+Shift+P" Click="FormattedView_Click"/>
+                            <Separator/>
                             <MenuItem Header="_Formatting Toolbar" x:Name="FormattingToolbarMenuItem" IsCheckable="True" IsChecked="True" Click="FormattingToolbar_Toggle"/>
                             <MenuItem Header="_Word Wrap" x:Name="WordWrapMenuItem" IsCheckable="True" Click="WordWrap_Toggle"/>
                             <MenuItem Header="_Line Numbers" x:Name="LineNumbersMenuItem" IsCheckable="True" Click="LineNumbers_Toggle"/>
@@ -178,169 +179,273 @@
             </DockPanel>
         </Border>
 
-        <!-- Tabs Bar -->
+        <!-- Merged Tabs and Formatting Toolbar Bar (Row 1) -->
         <Border Grid.Row="1" 
+                x:Name="TabsAndToolbarBorder"
+                Height="40"
                 Background="{DynamicResource MaterialDesignCardBackground}"
                 BorderBrush="{DynamicResource MaterialDesignDivider}"
                 BorderThickness="0,0,0,1"
-                Padding="6,4,6,0">
-            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-                <StackPanel Orientation="Horizontal" x:Name="TabsStackPanel">
-                    <!-- Dynamic Tabs Rendered Here -->
-                    <Button Style="{StaticResource MaterialDesignIconButton}" 
-                            ToolTip="New Document (Ctrl+N)"
-                            Margin="4,0,0,4"
-                            Width="32" Height="32"
-                            Click="NewTab_Click">
-                        <materialDesign:PackIcon Kind="Plus" Width="18" Height="18"/>
+                Padding="6,0,6,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <!-- Tabs area takes remaining width and scrolls horizontally -->
+                    <ColumnDefinition Width="*" />
+                    <!-- Thin vertical divider -->
+                    <ColumnDefinition Width="Auto" />
+                    <!-- Formatting toolbar on right -->
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- LEFT: Document Tabs and "+" button -->
+                <ScrollViewer Grid.Column="0" 
+                              HorizontalScrollBarVisibility="Auto" 
+                              VerticalScrollBarVisibility="Disabled"
+                              VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" x:Name="TabsStackPanel" VerticalAlignment="Center">
+                        <!-- Dynamic Tabs Rendered Here -->
+                        <Button Style="{StaticResource MaterialDesignIconButton}" 
+                                ToolTip="New Document (Ctrl+N)"
+                                Width="28" Height="28"
+                                Click="NewTab_Click">
+                            <materialDesign:PackIcon Kind="Plus" Width="18" Height="18" Foreground="{DynamicResource MaterialDesignBody}"/>
+                        </Button>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- Thin Vertical Divider -->
+                <Rectangle Grid.Column="1" 
+                           x:Name="ToolbarVerticalDivider"
+                           Width="1" Height="20" 
+                           Fill="{DynamicResource MaterialDesignDivider}" 
+                           Margin="8,0,8,0" 
+                           VerticalAlignment="Center"/>
+
+                <!-- RIGHT: Formatting Toolbar & Responsive Overflow -->
+                <StackPanel Grid.Column="2" 
+                            x:Name="FormattingToolbarPanel" 
+                            Orientation="Horizontal" 
+                            VerticalAlignment="Center" 
+                            HorizontalAlignment="Right">
+                    <!-- Full toolbar (visible on wider window) -->
+                    <StackPanel Orientation="Horizontal" x:Name="FullToolbarPanel" VerticalAlignment="Center">
+                        <!-- Headings Dropdown -->
+                        <Button x:Name="HeadingDropdownButton"
+                                Style="{StaticResource MaterialDesignFlatButton}" 
+                                materialDesign:ButtonAssist.CornerRadius="4"
+                                Padding="6,0" Height="28"
+                                ToolTip="Headings"
+                                Click="HeadingMenu_Click">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock x:Name="HeadingDropdownText" Text="Normal" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" Margin="0,0,3,0" Foreground="{DynamicResource MaterialDesignBody}"/>
+                                <materialDesign:PackIcon x:Name="HeadingDropdownChevron" Kind="ChevronDown" Width="14" Height="14" VerticalAlignment="Center" Foreground="{DynamicResource MaterialDesignBody}"/>
+                            </StackPanel>
+                            <Button.ContextMenu>
+                                <ContextMenu x:Name="HeadingContextMenu">
+                                    <MenuItem Header="H1 — Heading 1 (# )" FontWeight="Bold" FontSize="14" Click="Heading1_Click"/>
+                                    <MenuItem Header="H2 — Heading 2 (## )" FontWeight="SemiBold" FontSize="13" Click="Heading2_Click"/>
+                                    <MenuItem Header="H3 — Heading 3 (### )" FontWeight="Medium" FontSize="12" Click="Heading3_Click"/>
+                                    <MenuItem Header="H4 — Heading 4 (#### )" FontSize="12" Click="Heading4_Click"/>
+                                    <Separator/>
+                                    <MenuItem Header="Paragraph (Normal Text)" Click="Paragraph_Click"/>
+                                </ContextMenu>
+                            </Button.ContextMenu>
+                        </Button>
+
+                        <!-- Lists Dropdown -->
+                        <Button x:Name="ListDropdownButton"
+                                Style="{StaticResource MaterialDesignFlatButton}" 
+                                materialDesign:ButtonAssist.CornerRadius="4"
+                                Padding="6,0" Height="28"
+                                Margin="2,0,0,0"
+                                ToolTip="Lists"
+                                Click="ListMenu_Click">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <materialDesign:PackIcon x:Name="ListDropdownIcon" Kind="FormatListBulleted" Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,3,0" Foreground="{DynamicResource MaterialDesignBody}"/>
+                                <materialDesign:PackIcon x:Name="ListDropdownChevron" Kind="ChevronDown" Width="14" Height="14" VerticalAlignment="Center" Foreground="{DynamicResource MaterialDesignBody}"/>
+                            </StackPanel>
+                            <Button.ContextMenu>
+                                <ContextMenu x:Name="ListContextMenu">
+                                    <MenuItem Header="• Bulleted List (- )" Click="BulletList_Click">
+                                        <MenuItem.Icon>
+                                            <materialDesign:PackIcon Kind="FormatListBulleted" />
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="1. Numbered List (1. )" Click="NumberedList_Click">
+                                        <MenuItem.Icon>
+                                            <materialDesign:PackIcon Kind="FormatListNumbered" />
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="☑ Task Checklist (- [ ] )" Click="Checklist_Click">
+                                        <MenuItem.Icon>
+                                            <materialDesign:PackIcon Kind="FormatListChecks" />
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                </ContextMenu>
+                            </Button.ContextMenu>
+                        </Button>
+
+                        <!-- Separator -->
+                        <Rectangle Width="1" Height="14" Fill="{DynamicResource MaterialDesignDivider}" Margin="6,0,6,0" VerticalAlignment="Center"/>
+
+                        <!-- Bold -->
+                        <Button x:Name="BoldToolbarButton"
+                                Style="{StaticResource MaterialDesignIconButton}" 
+                                materialDesign:ButtonAssist.CornerRadius="4"
+                                Width="28" Height="28" Padding="0"
+                                ToolTip="Bold (Ctrl+B)"
+                                Click="Bold_Click">
+                            <TextBlock x:Name="BoldToolbarText" Text="B" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{DynamicResource MaterialDesignBody}"/>
+                        </Button>
+
+                        <!-- Italic -->
+                        <Button x:Name="ItalicToolbarButton"
+                                Style="{StaticResource MaterialDesignIconButton}" 
+                                materialDesign:ButtonAssist.CornerRadius="4"
+                                Width="28" Height="28" Padding="0"
+                                Margin="2,0,0,0"
+                                ToolTip="Italic (Ctrl+I)"
+                                Click="Italic_Click">
+                            <TextBlock x:Name="ItalicToolbarText" Text="I" FontStyle="Italic" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{DynamicResource MaterialDesignBody}"/>
+                        </Button>
+
+                        <!-- Strikethrough -->
+                        <Button x:Name="StrikethroughToolbarButton"
+                                Style="{StaticResource MaterialDesignIconButton}" 
+                                materialDesign:ButtonAssist.CornerRadius="4"
+                                Width="28" Height="28" Padding="0"
+                                Margin="2,0,0,0"
+                                ToolTip="Strikethrough (Ctrl+Shift+S)"
+                                Click="Strikethrough_Click">
+                            <TextBlock x:Name="StrikethroughToolbarText" Text="S" TextDecorations="Strikethrough" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{DynamicResource MaterialDesignBody}"/>
+                        </Button>
+
+                        <!-- Separator -->
+                        <Rectangle Width="1" Height="14" Fill="{DynamicResource MaterialDesignDivider}" Margin="6,0,6,0" VerticalAlignment="Center"/>
+
+                        <!-- Link -->
+                        <Button Style="{StaticResource MaterialDesignIconButton}" 
+                                Width="28" Height="28" Padding="0"
+                                ToolTip="Insert Link (Ctrl+K)"
+                                Click="Link_Click">
+                            <materialDesign:PackIcon Kind="LinkVariant" Width="16" Height="16" Foreground="{DynamicResource MaterialDesignBody}"/>
+                        </Button>
+
+                        <!-- Table Dropdown -->
+                        <Button Style="{StaticResource MaterialDesignFlatButton}" 
+                                Padding="6,0" Height="28"
+                                Margin="2,0,0,0"
+                                ToolTip="Insert Markdown Table"
+                                Click="TableMenu_Click">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <materialDesign:PackIcon Kind="TableLarge" Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,3,0" Foreground="{DynamicResource MaterialDesignBody}"/>
+                                <materialDesign:PackIcon Kind="ChevronDown" Width="14" Height="14" VerticalAlignment="Center" Foreground="{DynamicResource MaterialDesignBody}"/>
+                            </StackPanel>
+                            <Button.ContextMenu>
+                                <ContextMenu x:Name="TableContextMenu">
+                                    <MenuItem Header="2 × 2 Table" Click="Table2x2_Click"/>
+                                    <MenuItem Header="3 × 3 Table" Click="Table3x3_Click"/>
+                                    <MenuItem Header="4 × 4 Table" Click="Table4x4_Click"/>
+                                </ContextMenu>
+                            </Button.ContextMenu>
+                        </Button>
+
+                        <!-- Separator -->
+                        <Rectangle Width="1" Height="14" Fill="{DynamicResource MaterialDesignDivider}" Margin="6,0,6,0" VerticalAlignment="Center"/>
+
+                        <!-- Clear Formatting -->
+                        <Button Style="{StaticResource MaterialDesignIconButton}" 
+                                Width="28" Height="28" Padding="0"
+                                ToolTip="Clear Formatting"
+                                Click="ClearFormatting_Click">
+                            <materialDesign:PackIcon Kind="FormatClear" Width="16" Height="16" Foreground="{DynamicResource MaterialDesignBody}"/>
+                        </Button>
+                    </StackPanel>
+
+                    <!-- Compact Overflow Button (Shown when window width is narrow) -->
+                    <Button x:Name="OverflowToolbarButton"
+                            Style="{StaticResource MaterialDesignIconButton}"
+                            Width="28" Height="28" Padding="0"
+                            Visibility="Collapsed"
+                            ToolTip="Formatting Tools"
+                            Click="OverflowToolbar_Click">
+                        <materialDesign:PackIcon Kind="DotsHorizontal" Width="18" Height="18" Foreground="{DynamicResource MaterialDesignBody}"/>
+                        <Button.ContextMenu>
+                            <ContextMenu x:Name="OverflowToolbarContextMenu">
+                                <MenuItem Header="Heading 1 (H1)" FontWeight="Bold" Click="Heading1_Click"/>
+                                <MenuItem Header="Heading 2 (H2)" FontWeight="SemiBold" Click="Heading2_Click"/>
+                                <MenuItem Header="Heading 3 (H3)" FontWeight="Medium" Click="Heading3_Click"/>
+                                <MenuItem Header="Paragraph (Normal)" Click="Paragraph_Click"/>
+                                <Separator/>
+                                <MenuItem Header="Bold (Ctrl+B)" Click="Bold_Click">
+                                    <MenuItem.Icon>
+                                        <TextBlock Text="B" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="Italic (Ctrl+I)" Click="Italic_Click">
+                                    <MenuItem.Icon>
+                                        <TextBlock Text="I" FontStyle="Italic" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="Strikethrough (Ctrl+Shift+S)" Click="Strikethrough_Click">
+                                    <MenuItem.Icon>
+                                        <TextBlock Text="S" TextDecorations="Strikethrough" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <Separator/>
+                                <MenuItem Header="Bulleted List" Click="BulletList_Click">
+                                    <MenuItem.Icon>
+                                        <materialDesign:PackIcon Kind="FormatListBulleted"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="Numbered List" Click="NumberedList_Click">
+                                    <MenuItem.Icon>
+                                        <materialDesign:PackIcon Kind="FormatListNumbered"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="Task Checklist" Click="Checklist_Click">
+                                    <MenuItem.Icon>
+                                        <materialDesign:PackIcon Kind="FormatListChecks"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <Separator/>
+                                <MenuItem Header="Insert Link (Ctrl+K)" Click="Link_Click">
+                                    <MenuItem.Icon>
+                                        <materialDesign:PackIcon Kind="LinkVariant"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="Insert Table">
+                                    <MenuItem.Icon>
+                                        <materialDesign:PackIcon Kind="TableLarge"/>
+                                    </MenuItem.Icon>
+                                    <MenuItem Header="2 × 2 Table" Click="Table2x2_Click"/>
+                                    <MenuItem Header="3 × 3 Table" Click="Table3x3_Click"/>
+                                    <MenuItem Header="4 × 4 Table" Click="Table4x4_Click"/>
+                                </MenuItem>
+                                <Separator/>
+                                <MenuItem Header="Clear Formatting" Click="ClearFormatting_Click">
+                                    <MenuItem.Icon>
+                                        <materialDesign:PackIcon Kind="FormatClear"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                            </ContextMenu>
+                        </Button.ContextMenu>
                     </Button>
                 </StackPanel>
-            </ScrollViewer>
+            </Grid>
         </Border>
 
-        <!-- Formatting Toolbar (Markdown / Rich Notes) -->
-        <Border Grid.Row="2" 
-                x:Name="FormattingToolbarBorder"
-                Background="{DynamicResource MaterialDesignCardBackground}"
-                BorderBrush="{DynamicResource MaterialDesignDivider}"
-                BorderThickness="0,0,0,1"
-                Padding="10,3">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <!-- Headings Dropdown -->
-                <Button Style="{StaticResource MaterialDesignFlatButton}" 
-                        Padding="8,0" Height="30"
-                        ToolTip="Headings"
-                        Click="HeadingMenu_Click">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="H1" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                        <materialDesign:PackIcon Kind="ChevronDown" Width="14" Height="14" VerticalAlignment="Center"/>
-                    </StackPanel>
-                    <Button.ContextMenu>
-                        <ContextMenu x:Name="HeadingContextMenu">
-                            <MenuItem Header="H1 — Heading 1 (# )" FontWeight="Bold" FontSize="14" Click="Heading1_Click"/>
-                            <MenuItem Header="H2 — Heading 2 (## )" FontWeight="SemiBold" FontSize="13" Click="Heading2_Click"/>
-                            <MenuItem Header="H3 — Heading 3 (### )" FontWeight="Medium" FontSize="12" Click="Heading3_Click"/>
-                            <MenuItem Header="H4 — Heading 4 (#### )" FontSize="12" Click="Heading4_Click"/>
-                            <Separator/>
-                            <MenuItem Header="Paragraph (Normal Text)" Click="Paragraph_Click"/>
-                        </ContextMenu>
-                    </Button.ContextMenu>
-                </Button>
+        <!-- Editor Content Area (Row 2) -->
+        <controls:NotepadEditor Grid.Row="2" x:Name="ActiveEditor" />
 
-                <!-- Lists Dropdown -->
-                <Button Style="{StaticResource MaterialDesignFlatButton}" 
-                        Padding="8,0" Height="30"
-                        Margin="4,0,0,0"
-                        ToolTip="Lists"
-                        Click="ListMenu_Click">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <materialDesign:PackIcon Kind="FormatListBulleted" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                        <materialDesign:PackIcon Kind="ChevronDown" Width="14" Height="14" VerticalAlignment="Center"/>
-                    </StackPanel>
-                    <Button.ContextMenu>
-                        <ContextMenu x:Name="ListContextMenu">
-                            <MenuItem Header="• Bulleted List (- )" Click="BulletList_Click">
-                                <MenuItem.Icon>
-                                    <materialDesign:PackIcon Kind="FormatListBulleted" />
-                                </MenuItem.Icon>
-                            </MenuItem>
-                            <MenuItem Header="1. Numbered List (1. )" Click="NumberedList_Click">
-                                <MenuItem.Icon>
-                                    <materialDesign:PackIcon Kind="FormatListNumbered" />
-                                </MenuItem.Icon>
-                            </MenuItem>
-                            <MenuItem Header="☑ Task Checklist (- [ ] )" Click="Checklist_Click">
-                                <MenuItem.Icon>
-                                    <materialDesign:PackIcon Kind="FormatListChecks" />
-                                </MenuItem.Icon>
-                            </MenuItem>
-                        </ContextMenu>
-                    </Button.ContextMenu>
-                </Button>
-
-                <!-- Separator -->
-                <Rectangle Width="1" Height="16" Fill="{DynamicResource MaterialDesignDivider}" Margin="8,0,8,0" VerticalAlignment="Center"/>
-
-                <!-- Bold -->
-                <Button Style="{StaticResource MaterialDesignIconButton}" 
-                        Width="30" Height="30" Padding="0"
-                        ToolTip="Bold (Ctrl+B)"
-                        Click="Bold_Click">
-                    <TextBlock Text="B" FontWeight="Bold" FontSize="15" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                </Button>
-
-                <!-- Italic -->
-                <Button Style="{StaticResource MaterialDesignIconButton}" 
-                        Width="30" Height="30" Padding="0"
-                        Margin="2,0,0,0"
-                        ToolTip="Italic (Ctrl+I)"
-                        Click="Italic_Click">
-                    <TextBlock Text="I" FontStyle="Italic" FontWeight="SemiBold" FontSize="15" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                </Button>
-
-                <!-- Strikethrough -->
-                <Button Style="{StaticResource MaterialDesignIconButton}" 
-                        Width="30" Height="30" Padding="0"
-                        Margin="2,0,0,0"
-                        ToolTip="Strikethrough (Ctrl+Shift+S)"
-                        Click="Strikethrough_Click">
-                    <TextBlock Text="S" TextDecorations="Strikethrough" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                </Button>
-
-                <!-- Separator -->
-                <Rectangle Width="1" Height="16" Fill="{DynamicResource MaterialDesignDivider}" Margin="8,0,8,0" VerticalAlignment="Center"/>
-
-                <!-- Link -->
-                <Button Style="{StaticResource MaterialDesignIconButton}" 
-                        Width="30" Height="30" Padding="0"
-                        ToolTip="Insert Link (Ctrl+K)"
-                        Click="Link_Click">
-                    <materialDesign:PackIcon Kind="LinkVariant" Width="18" Height="18"/>
-                </Button>
-
-                <!-- Table Dropdown -->
-                <Button Style="{StaticResource MaterialDesignFlatButton}" 
-                        Padding="8,0" Height="30"
-                        Margin="4,0,0,0"
-                        ToolTip="Insert Markdown Table"
-                        Click="TableMenu_Click">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <materialDesign:PackIcon Kind="TableLarge" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                        <materialDesign:PackIcon Kind="ChevronDown" Width="14" Height="14" VerticalAlignment="Center"/>
-                    </StackPanel>
-                    <Button.ContextMenu>
-                        <ContextMenu x:Name="TableContextMenu">
-                            <MenuItem Header="2 × 2 Table" Click="Table2x2_Click"/>
-                            <MenuItem Header="3 × 3 Table" Click="Table3x3_Click"/>
-                            <MenuItem Header="4 × 4 Table" Click="Table4x4_Click"/>
-                        </ContextMenu>
-                    </Button.ContextMenu>
-                </Button>
-
-                <!-- Separator -->
-                <Rectangle Width="1" Height="16" Fill="{DynamicResource MaterialDesignDivider}" Margin="8,0,8,0" VerticalAlignment="Center"/>
-
-                <!-- Clear Formatting -->
-                <Button Style="{StaticResource MaterialDesignIconButton}" 
-                        Width="30" Height="30" Padding="0"
-                        ToolTip="Clear Formatting (Remove Markdown)"
-                        Click="ClearFormatting_Click">
-                    <materialDesign:PackIcon Kind="FormatClear" Width="18" Height="18"/>
-                </Button>
-            </StackPanel>
-        </Border>
-
-        <!-- Editor Content Area -->
-        <controls:NotepadEditor Grid.Row="3" x:Name="ActiveEditor" />
-
-        <!-- Status Bar -->
-        <Border Grid.Row="4" 
+        <!-- Status Bar (Row 3) -->
+        <Border Grid.Row="3" 
                 Background="{DynamicResource MaterialDesignCardBackground}"
                 BorderBrush="{DynamicResource MaterialDesignDivider}"
                 BorderThickness="0,1,0,0"
                 Padding="16,4">
             <DockPanel LastChildFill="True">
-                <!-- Right Side: Zoom, Line Ending, Encoding -->
+                <!-- Right Side: Zoom, Line Ending, Encoding, Segmented View Mode Toggle -->
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
                     <TextBlock x:Name="ZoomStatusText" 
                                Text="100%" 
@@ -359,11 +464,19 @@
                                Text="UTF-8" 
                                Margin="0,0,12,0"
                                Opacity="0.8"/>
-                    <Button Style="{StaticResource MaterialDesignIconButton}" 
-                            Width="20" Height="20" Padding="0"
-                            ToolTip="Settings (Ctrl+,)"
-                            Click="Settings_Click">
-                        <materialDesign:PackIcon Kind="CogOutline" Width="15" Height="15"/>
+                    <Separator Margin="0,0,12,0"/>
+                    <!-- Status Bar View Mode Button -->
+                    <Button x:Name="StatusBarViewModeButton"
+                            Style="{StaticResource MaterialDesignFlatButton}" 
+                            Height="24" Padding="6,0"
+                            Margin="0,0,4,0"
+                            VerticalAlignment="Center"
+                            ToolTip="Switch to Markdown syntax (Ctrl+Shift+M)"
+                            Click="ToggleViewMode_Click">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <materialDesign:PackIcon x:Name="StatusBarViewModeIcon" Kind="FormatLetterCase" Width="14" Height="14" Margin="0,0,5,0" VerticalAlignment="Center" Foreground="{DynamicResource MaterialDesignBody}"/>
+                            <TextBlock x:Name="StatusBarViewModeText" Text="Formatted" FontSize="11" FontWeight="Medium" VerticalAlignment="Center" Foreground="{DynamicResource MaterialDesignBody}"/>
+                        </StackPanel>
                     </Button>
                 </StackPanel>
 
@@ -380,7 +493,7 @@
             </DockPanel>
         </Border>
         <!-- Floating Fullscreen Control Bar (Visible in Fullscreen Mode) -->
-        <Border Grid.Row="0" Grid.RowSpan="5"
+        <Border Grid.Row="0" Grid.RowSpan="4"
                 x:Name="FullscreenControlBar"
                 Visibility="Collapsed"
                 HorizontalAlignment="Right"

@@ -1,0 +1,41 @@
+<Window x:Class="NotepadByFerryPot.Views.RenameDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Rename Tab" 
+        Icon="../Assets/app.ico"
+        Height="210" Width="420"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="{DynamicResource MaterialDesignPaper}"
+        TextElement.Foreground="{DynamicResource MaterialDesignBody}">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Rename Tab" Style="{StaticResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,12"/>
+
+        <TextBox Grid.Row="1" 
+                 x:Name="NewNameTextBox"
+                 materialDesign:HintAssist.Hint="Tab Name"
+                 materialDesign:HintAssist.IsFloating="True"
+                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                 VerticalAlignment="Center"
+                 Margin="0,0,0,12"
+                 KeyDown="NewNameTextBox_KeyDown"/>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="CANCEL" 
+                    Style="{StaticResource MaterialDesignFlatButton}"
+                    Margin="0,0,8,0"
+                    Click="Cancel_Click"/>
+            <Button Content="RENAME" 
+                    Style="{StaticResource MaterialDesignRaisedButton}"
+                    Foreground="#1C1B1F"
+                    Click="Rename_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

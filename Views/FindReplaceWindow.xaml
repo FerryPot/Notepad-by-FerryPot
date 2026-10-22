@@ -4,7 +4,7 @@
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         Title="Find &amp; Replace" 
         Icon="../Assets/app.ico"
-        Height="340" Width="480"
+        Height="350" Width="500"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         Background="{DynamicResource MaterialDesignPaper}"
@@ -36,11 +36,12 @@
                  Margin="0,0,0,16" />
 
         <!-- Options Checkboxes -->
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,16">
-            <CheckBox x:Name="MatchCaseCheckBox" Content="Match case" Margin="0,0,16,0" Style="{StaticResource MaterialDesignCheckBox}" />
-            <CheckBox x:Name="MatchWholeWordCheckBox" Content="Match whole word" Margin="0,0,16,0" Style="{StaticResource MaterialDesignCheckBox}" />
-            <CheckBox x:Name="SearchUpCheckBox" Content="Search up" Style="{StaticResource MaterialDesignCheckBox}" />
-        </StackPanel>
+        <WrapPanel Grid.Row="2" Margin="0,0,0,16">
+            <CheckBox x:Name="MatchCaseCheckBox" Content="Match case" Margin="0,0,16,6" Style="{StaticResource MaterialDesignCheckBox}" />
+            <CheckBox x:Name="MatchWholeWordCheckBox" Content="Match whole word" Margin="0,0,16,6" Style="{StaticResource MaterialDesignCheckBox}" />
+            <CheckBox x:Name="SearchUpCheckBox" Content="Search up" Margin="0,0,16,6" Style="{StaticResource MaterialDesignCheckBox}" />
+            <CheckBox x:Name="UseRegexCheckBox" Content="Regex" Margin="0,0,0,6" Style="{StaticResource MaterialDesignCheckBox}" />
+        </WrapPanel>
 
         <!-- Status Message -->
         <TextBlock Grid.Row="3"

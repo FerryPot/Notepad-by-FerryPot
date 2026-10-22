@@ -30,6 +30,7 @@ namespace NotepadByFerryPot
             ThemeService.ApplyTheme(SettingsService.Current);
 
             Loaded += MainWindow_Loaded;
+            SizeChanged += MainWindow_SizeChanged;
         }
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -37,6 +38,10 @@ namespace NotepadByFerryPot
             // Create initial document
             CreateNewTab();
             ApplySettingsToWindow();
+            UpdateViewModeUI();
+            UpdateToolbarResponsiveLayout();
+            ActiveEditor.FormattingStateChanged += (s, state) => UpdateFormattingToolbarState(state);
+            UpdateFormattingToolbarState(ActiveEditor?.GetCurrentFormattingState());
         }
 
         public void ApplySettingsToWindow()
@@ -48,9 +53,15 @@ namespace NotepadByFerryPot
             FormattingToolbarMenuItem.IsChecked = s.ShowFormattingToolbar;
 
             StatusBarRow.Height = s.ShowStatusBar ? GridLength.Auto : new GridLength(0);
-            FormattingBarRow.Height = s.ShowFormattingToolbar ? GridLength.Auto : new GridLength(0);
+            if (ToolbarVerticalDivider != null && FormattingToolbarPanel != null)
+            {
+                var vis = s.ShowFormattingToolbar ? Visibility.Visible : Visibility.Collapsed;
+                ToolbarVerticalDivider.Visibility = vis;
+                FormattingToolbarPanel.Visibility = vis;
+            }
 
             ActiveEditor.ApplySettings();
+            UpdateFormattingToolbarState(ActiveEditor?.GetCurrentFormattingState());
         }
 
         #region Tab Management
@@ -76,12 +87,20 @@ namespace NotepadByFerryPot
 
         private void SetActiveDocument(NotepadDocument doc)
         {
+            if (_activeDocument != null && ActiveEditor != null)
+            {
+                ActiveEditor.SyncToDocument();
+            }
             _activeDocument = doc;
-            ActiveEditor.Document = doc;
+            if (ActiveEditor != null)
+            {
+                ActiveEditor.Document = doc;
+            }
 
             UpdateTitle();
             UpdateStatusBar();
             RebuildTabsUI();
+            UpdateFormattingToolbarState(ActiveEditor?.GetCurrentFormattingState());
         }
 
         private void RebuildTabsUI()
@@ -94,14 +113,16 @@ namespace NotepadByFerryPot
 
                 var tabBorder = new Border
                 {
-                    CornerRadius = new CornerRadius(16),
+                    Height = 30,
+                    CornerRadius = new CornerRadius(15),
                     Background = isActive 
                         ? (Brush)FindResource("MaterialDesign.Brush.Primary") 
                         : (Brush)FindResource("MaterialDesignCardBackground"),
                     BorderBrush = (Brush)FindResource("MaterialDesignDivider"),
                     BorderThickness = new Thickness(1),
-                    Margin = new Thickness(0, 0, 6, 4),
-                    Padding = new Thickness(12, 6, 8, 6),
+                    Margin = new Thickness(0, 0, 4, 0),
+                    Padding = new Thickness(10, 0, 8, 0),
+                    VerticalAlignment = VerticalAlignment.Center,
                     Cursor = Cursors.Hand,
                     Tag = doc
                 };
@@ -114,11 +135,53 @@ namespace NotepadByFerryPot
                     }
                 };
 
-                var sp = new StackPanel { Orientation = Orientation.Horizontal };
+                tabBorder.MouseRightButtonDown += (s, e) =>
+                {
+                    if (s is Border b && b.Tag is NotepadDocument d)
+                    {
+                        SetActiveDocument(d);
+                    }
+                };
+
+                // Context Menu on Tab Right-Click (New tab, Rename, Close, Close others, Close to right)
+                var contextMenu = new ContextMenu();
+
+                var newTabItem = new MenuItem { Header = "New tab", InputGestureText = "Ctrl+N" };
+                newTabItem.Click += (s, e) => CreateNewTab();
+                contextMenu.Items.Add(newTabItem);
+
+                var renameItem = new MenuItem { Header = "Rename..." };
+                renameItem.Click += (s, e) => PromptRenameTab(doc);
+                contextMenu.Items.Add(renameItem);
+
+                contextMenu.Items.Add(new Separator());
+
+                var closeTabItem = new MenuItem { Header = "Close tab", InputGestureText = "Ctrl+W" };
+                closeTabItem.Click += (s, e) => CloseTab(doc);
+                contextMenu.Items.Add(closeTabItem);
+
+                var closeOthersItem = new MenuItem { Header = "Close other tabs" };
+                closeOthersItem.IsEnabled = Documents.Count > 1;
+                closeOthersItem.Click += (s, e) => CloseOtherTabs(doc);
+                contextMenu.Items.Add(closeOthersItem);
+
+                int docIndex = Documents.IndexOf(doc);
+                var closeRightItem = new MenuItem { Header = "Close tabs to the right" };
+                closeRightItem.IsEnabled = docIndex < Documents.Count - 1;
+                closeRightItem.Click += (s, e) => CloseTabsToTheRight(doc);
+                contextMenu.Items.Add(closeRightItem);
+
+                tabBorder.ContextMenu = contextMenu;
+
+                var sp = new StackPanel 
+                { 
+                    Orientation = Orientation.Horizontal,
+                    VerticalAlignment = VerticalAlignment.Center 
+                };
 
                 var brandDarkBrush = new SolidColorBrush(Color.FromRgb(0x1C, 0x1B, 0x1F));
 
-                // Modified dot / icon
+                // Tab Title Text
                 var titleText = new TextBlock
                 {
                     Text = doc.DisplayTitle,
@@ -127,7 +190,8 @@ namespace NotepadByFerryPot
                         ? brandDarkBrush 
                         : (Brush)FindResource("MaterialDesignBody"),
                     VerticalAlignment = VerticalAlignment.Center,
-                    Margin = new Thickness(0, 0, 8, 0)
+                    Margin = new Thickness(0, 0, 6, 0),
+                    FontSize = 12
                 };
                 sp.Children.Add(titleText);
 
@@ -140,6 +204,7 @@ namespace NotepadByFerryPot
                     Background = Brushes.Transparent,
                     BorderThickness = new Thickness(0),
                     Style = (Style)FindResource("MaterialDesignIconButton"),
+                    VerticalAlignment = VerticalAlignment.Center,
                     Tag = doc
                 };
 
@@ -171,13 +236,20 @@ namespace NotepadByFerryPot
             // Plus Button
             var addBtn = new Button
             {
-                Width = 32,
-                Height = 32,
-                Margin = new Thickness(4, 0, 0, 4),
+                Width = 28,
+                Height = 28,
+                Margin = new Thickness(2, 0, 0, 0),
                 ToolTip = "New Document (Ctrl+N)",
-                Style = (Style)FindResource("MaterialDesignIconButton")
+                Style = (Style)FindResource("MaterialDesignIconButton"),
+                VerticalAlignment = VerticalAlignment.Center
             };
-            var addIcon = new PackIcon { Kind = PackIconKind.Plus, Width = 18, Height = 18 };
+            var addIcon = new PackIcon 
+            { 
+                Kind = PackIconKind.Plus, 
+                Width = 16, 
+                Height = 16,
+                Foreground = (Brush)FindResource("MaterialDesignBody")
+            };
             addBtn.Content = addIcon;
             addBtn.Click += (s, e) => CreateNewTab();
 
@@ -189,7 +261,7 @@ namespace NotepadByFerryPot
             // Sync editor text first if this is the active document
             if (doc == _activeDocument && ActiveEditor != null)
             {
-                doc.Content = ActiveEditor.EditorTextBox.Text;
+                ActiveEditor.SyncToDocument();
             }
 
             bool hasUnsaved = doc.IsModified || 
@@ -238,6 +310,79 @@ namespace NotepadByFerryPot
             return true;
         }
 
+        private void PromptRenameTab(NotepadDocument doc)
+        {
+            var dialog = new RenameDialog(doc.Title)
+            {
+                Owner = this
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                string newName = dialog.NewName;
+                if (!string.IsNullOrEmpty(doc.FilePath) && File.Exists(doc.FilePath))
+                {
+                    try
+                    {
+                        string dir = Path.GetDirectoryName(doc.FilePath)!;
+                        string ext = Path.GetExtension(doc.FilePath);
+                        if (!newName.EndsWith(ext, StringComparison.OrdinalIgnoreCase) && !newName.Contains('.'))
+                        {
+                            newName += ext;
+                        }
+
+                        string newPath = Path.Combine(dir, newName);
+                        if (!string.Equals(doc.FilePath, newPath, StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (File.Exists(newPath))
+                            {
+                                MessageBox.Show($"A file named \"{newName}\" already exists in this folder.", "Rename Tab", MessageBoxButton.OK, MessageBoxImage.Warning);
+                                return;
+                            }
+                            File.Move(doc.FilePath, newPath);
+                            doc.FilePath = newPath;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Could not rename file on disk: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        return;
+                    }
+                }
+
+                doc.Title = newName;
+                UpdateTitle();
+                RebuildTabsUI();
+            }
+        }
+
+        private void CloseOtherTabs(NotepadDocument keepDoc)
+        {
+            var docsToClose = Documents.Where(d => d != keepDoc).ToList();
+            foreach (var d in docsToClose)
+            {
+                if (!CloseTab(d))
+                {
+                    break;
+                }
+            }
+        }
+
+        private void CloseTabsToTheRight(NotepadDocument doc)
+        {
+            int index = Documents.IndexOf(doc);
+            if (index < 0) return;
+
+            var docsToClose = Documents.Skip(index + 1).ToList();
+            foreach (var d in docsToClose)
+            {
+                if (!CloseTab(d))
+                {
+                    break;
+                }
+            }
+        }
+
         #endregion
 
         #region Document Events & Status
@@ -280,7 +425,7 @@ namespace NotepadByFerryPot
             if (_activeDocument == null) return;
 
             LineColStatusText.Text = $"Ln {_activeDocument.CurrentLine}, Col {_activeDocument.CurrentColumn}";
-            WordCharStatusText.Text = $"{_activeDocument.WordCount:N0} words  |  {_activeDocument.CharacterCount:N0} chars";
+            WordCharStatusText.Text = $"{_activeDocument.CharacterCount:N0} characters";
             LineEndingStatusText.Text = _activeDocument.LineEnding;
             EncodingStatusText.Text = _activeDocument.EncodingName;
             ZoomStatusText.Text = $"{(int)SettingsService.Current.ZoomLevel}%";
@@ -345,6 +490,11 @@ namespace NotepadByFerryPot
 
         private bool SaveDocument(NotepadDocument doc)
         {
+            if (doc == _activeDocument && ActiveEditor != null)
+            {
+                ActiveEditor.SyncToDocument();
+            }
+
             if (string.IsNullOrEmpty(doc.FilePath))
             {
                 return SaveDocumentAs(doc);
@@ -367,6 +517,11 @@ namespace NotepadByFerryPot
 
         private bool SaveDocumentAs(NotepadDocument doc)
         {
+            if (doc == _activeDocument && ActiveEditor != null)
+            {
+                ActiveEditor.SyncToDocument();
+            }
+
             var dlg = new SaveFileDialog
             {
                 Filter = "Text Documents (*.txt)|*.txt|Markdown (*.md)|*.md|All Files (*.*)|*.*",
@@ -439,17 +594,17 @@ namespace NotepadByFerryPot
 
         #region Edit Commands
 
-        private void Undo_Click(object sender, RoutedEventArgs e) => ActiveEditor.EditorTextBox.Undo();
-        private void Redo_Click(object sender, RoutedEventArgs e) => ActiveEditor.EditorTextBox.Redo();
-        private void Cut_Click(object sender, RoutedEventArgs e) => ActiveEditor.EditorTextBox.Cut();
-        private void Copy_Click(object sender, RoutedEventArgs e) => ActiveEditor.EditorTextBox.Copy();
-        private void Paste_Click(object sender, RoutedEventArgs e) => ActiveEditor.EditorTextBox.Paste();
-        private void SelectAll_Click(object sender, RoutedEventArgs e) => ActiveEditor.EditorTextBox.SelectAll();
+        private void Undo_Click(object sender, RoutedEventArgs e) => ActiveEditor.Undo();
+        private void Redo_Click(object sender, RoutedEventArgs e) => ActiveEditor.Redo();
+        private void Cut_Click(object sender, RoutedEventArgs e) => ActiveEditor.Cut();
+        private void Copy_Click(object sender, RoutedEventArgs e) => ActiveEditor.Copy();
+        private void Paste_Click(object sender, RoutedEventArgs e) => ActiveEditor.Paste();
+        private void SelectAll_Click(object sender, RoutedEventArgs e) => ActiveEditor.SelectAll();
 
         private void InsertTimeDate_Click(object sender, RoutedEventArgs e)
         {
             string timeDate = DateTime.Now.ToString("h:mm tt M/d/yyyy");
-            ActiveEditor.EditorTextBox.SelectedText = timeDate;
+            ActiveEditor.InsertText(timeDate);
         }
 
         #endregion
@@ -458,7 +613,7 @@ namespace NotepadByFerryPot
 
         private void Find_Click(object sender, RoutedEventArgs e)
         {
-            var findWindow = new FindReplaceWindow(ActiveEditor.EditorTextBox)
+            var findWindow = new FindReplaceWindow(ActiveEditor)
             {
                 Owner = this
             };
@@ -584,6 +739,160 @@ namespace NotepadByFerryPot
 
         private void ClearFormatting_Click(object sender, RoutedEventArgs e) => ActiveEditor.ClearFormatting();
 
+        private void OverflowToolbar_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.ContextMenu != null)
+            {
+                btn.ContextMenu.PlacementTarget = btn;
+                btn.ContextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+                btn.ContextMenu.IsOpen = true;
+            }
+        }
+
+        private void MainWindow_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            UpdateToolbarResponsiveLayout();
+        }
+
+        private void UpdateToolbarResponsiveLayout()
+        {
+            if (FullToolbarPanel == null || OverflowToolbarButton == null) return;
+
+            // When window width is narrow (< 820px), collapse full toolbar and show "..." overflow button
+            bool isNarrow = ActualWidth < 820;
+            FullToolbarPanel.Visibility = isNarrow ? Visibility.Collapsed : Visibility.Visible;
+            OverflowToolbarButton.Visibility = isNarrow ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private void UpdateFormattingToolbarState(EditorFormattingState? state)
+        {
+            if (BoldToolbarButton == null || ItalicToolbarButton == null || StrikethroughToolbarButton == null ||
+                HeadingDropdownButton == null || ListDropdownButton == null)
+            {
+                return;
+            }
+
+            state ??= new EditorFormattingState();
+
+            // Accent brush (Amber)
+            Brush primaryBrush;
+            try
+            {
+                primaryBrush = (Brush)FindResource("MaterialDesign.Brush.Primary");
+            }
+            catch
+            {
+                primaryBrush = new SolidColorBrush(Color.FromRgb(255, 193, 7));
+            }
+
+            // Normal text color (body)
+            Brush bodyBrush;
+            try
+            {
+                bodyBrush = (Brush)FindResource("MaterialDesignBody");
+            }
+            catch
+            {
+                bodyBrush = Brushes.Gray;
+            }
+
+            // Filled rounded background using the theme accent color (amber) at low opacity
+            bool isDark = SettingsService.Current.BaseTheme == BaseTheme.Dark;
+            Brush highlightBackground;
+            Brush activeIconBrush;
+
+            if (isDark)
+            {
+                // Dark and AMOLED themes: ~22% amber background, vibrant amber icon
+                highlightBackground = new SolidColorBrush(Color.FromArgb(56, 255, 193, 7));
+                activeIconBrush = primaryBrush;
+            }
+            else
+            {
+                // Light theme: ~20% amber background, high-contrast rich amber icon for crisp readability
+                highlightBackground = new SolidColorBrush(Color.FromArgb(48, 255, 193, 7));
+                activeIconBrush = new SolidColorBrush(Color.FromRgb(196, 125, 0));
+            }
+            highlightBackground.Freeze();
+            if (activeIconBrush.CanFreeze) activeIconBrush.Freeze();
+
+            // Bold
+            BoldToolbarButton.Background = state.IsBold ? highlightBackground : Brushes.Transparent;
+            BoldToolbarText.Foreground = state.IsBold ? activeIconBrush : bodyBrush;
+
+            // Italic
+            ItalicToolbarButton.Background = state.IsItalic ? highlightBackground : Brushes.Transparent;
+            ItalicToolbarText.Foreground = state.IsItalic ? activeIconBrush : bodyBrush;
+
+            // Strikethrough
+            StrikethroughToolbarButton.Background = state.IsStrikethrough ? highlightBackground : Brushes.Transparent;
+            StrikethroughToolbarText.Foreground = state.IsStrikethrough ? activeIconBrush : bodyBrush;
+
+            // Heading Dropdown
+            HeadingDropdownText.Text = state.Heading;
+            bool isHeading = state.Heading != "Normal";
+            HeadingDropdownButton.Background = isHeading ? highlightBackground : Brushes.Transparent;
+            HeadingDropdownText.Foreground = isHeading ? activeIconBrush : bodyBrush;
+            HeadingDropdownChevron.Foreground = isHeading ? activeIconBrush : bodyBrush;
+
+            // List Dropdown
+            ListDropdownButton.Background = state.IsList ? highlightBackground : Brushes.Transparent;
+            ListDropdownIcon.Foreground = state.IsList ? activeIconBrush : bodyBrush;
+            ListDropdownChevron.Foreground = state.IsList ? activeIconBrush : bodyBrush;
+        }
+
+        #endregion
+
+        #region View Mode Handlers (Formatted vs Syntax View)
+
+        private void ToggleViewMode_Click(object sender, RoutedEventArgs e)
+        {
+            SetViewMode(!ActiveEditor.IsFormattedView);
+        }
+
+        private void SyntaxView_Click(object sender, RoutedEventArgs e)
+        {
+            SetViewMode(false);
+        }
+
+        private void FormattedView_Click(object sender, RoutedEventArgs e)
+        {
+            SetViewMode(true);
+        }
+
+        private void SetViewMode(bool formatted)
+        {
+            ActiveEditor.SetViewMode(formatted);
+            UpdateViewModeUI();
+            UpdateFormattingToolbarState(ActiveEditor?.GetCurrentFormattingState());
+        }
+
+        private void UpdateViewModeUI()
+        {
+            bool isFormatted = ActiveEditor.IsFormattedView;
+
+            SyntaxViewMenuItem.IsChecked = !isFormatted;
+            FormattedViewMenuItem.IsChecked = isFormatted;
+
+            if (StatusBarViewModeButton != null && StatusBarViewModeIcon != null && StatusBarViewModeText != null)
+            {
+                if (isFormatted)
+                {
+                    StatusBarViewModeIcon.Kind = PackIconKind.FormatLetterCase;
+                    StatusBarViewModeText.Text = "Formatted";
+                    StatusBarViewModeButton.ToolTip = "Switch to Markdown syntax (Ctrl+Shift+M)";
+                }
+                else
+                {
+                    StatusBarViewModeIcon.Kind = PackIconKind.LanguageMarkdown;
+                    StatusBarViewModeText.Text = "Markdown";
+                    StatusBarViewModeButton.ToolTip = "Switch to Formatted (Ctrl+Shift+M)";
+                }
+            }
+
+            UpdateStatusBar();
+        }
+
         #endregion
 
         private void FocusMode_Click(object sender, RoutedEventArgs e)
@@ -592,7 +901,6 @@ namespace NotepadByFerryPot
 
             TopAppBarRow.Height = _isFocusMode ? new GridLength(0) : GridLength.Auto;
             TabsBarRow.Height = _isFocusMode ? new GridLength(0) : GridLength.Auto;
-            FormattingBarRow.Height = _isFocusMode ? new GridLength(0) : (SettingsService.Current.ShowFormattingToolbar ? GridLength.Auto : new GridLength(0));
             StatusBarRow.Height = _isFocusMode ? new GridLength(0) : (SettingsService.Current.ShowStatusBar ? GridLength.Auto : new GridLength(0));
 
             WindowState = _isFocusMode ? WindowState.Maximized : WindowState.Normal;
@@ -731,7 +1039,12 @@ namespace NotepadByFerryPot
                 e.Handled = true;
                 Find_Click(sender, e);
             }
-            else if (ctrl && e.Key == Key.P)
+            else if (ctrl && shift && (e.Key == Key.M || e.Key == Key.P))
+            {
+                e.Handled = true;
+                ToggleViewMode_Click(sender, e);
+            }
+            else if (ctrl && !shift && e.Key == Key.P)
             {
                 e.Handled = true;
                 Print_Click(sender, e);
@@ -793,7 +1106,7 @@ namespace NotepadByFerryPot
             // Sync active editor content first
             if (_activeDocument != null && ActiveEditor != null)
             {
-                _activeDocument.Content = ActiveEditor.EditorTextBox.Text;
+                ActiveEditor.SyncToDocument();
             }
 
             // Check all documents for unsaved content
