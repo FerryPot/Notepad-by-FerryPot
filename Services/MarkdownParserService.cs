@@ -17,7 +17,7 @@ namespace NotepadByFerryPot.Services
         {
             var doc = new FlowDocument
             {
-                PagePadding = new Thickness(0),
+                PagePadding = new Thickness(16, 12, 16, 12),
                 FontFamily = fontFamily,
                 FontSize = baseFontSize,
                 LineHeight = baseFontSize * 1.5,
@@ -73,7 +73,7 @@ namespace NotepadByFerryPot.Services
                     if (level <= 6 && level < trimmed.Length && trimmed[level] == ' ')
                     {
                         string headerText = trimmed.Substring(level + 1).Trim();
-                        doc.Blocks.Add(CreateHeader(headerText, level, baseFontSize, foreground));
+                        doc.Blocks.Add(CreateHeader(headerText, level, baseFontSize, foreground, isFirst: doc.Blocks.Count == 0));
                         i++;
                         continue;
                     }
@@ -720,7 +720,7 @@ namespace NotepadByFerryPot.Services
             return list;
         }
 
-        private static Block CreateHeader(string text, int level, double baseFontSize, Brush foreground)
+        private static Block CreateHeader(string text, int level, double baseFontSize, Brush foreground, bool isFirst = false)
         {
             double size = level switch
             {
@@ -737,7 +737,7 @@ namespace NotepadByFerryPot.Services
             {
                 FontSize = size,
                 FontWeight = level <= 2 ? FontWeights.Bold : FontWeights.SemiBold,
-                Margin = new Thickness(0, baseFontSize * (level == 1 ? 0.6 : 0.4), 0, baseFontSize * 0.4),
+                Margin = new Thickness(0, isFirst ? 0 : baseFontSize * (level == 1 ? 0.6 : 0.4), 0, baseFontSize * 0.4),
                 Tag = "h" + level
             };
             AddFormattedInlines(p, text, foreground);

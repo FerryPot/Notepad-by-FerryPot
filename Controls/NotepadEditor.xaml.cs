@@ -149,9 +149,9 @@ namespace NotepadByFerryPot.Controls
                     catch
                     {
                         var ff = GetFormattedFontFamily(SettingsService.Current.FontFamilyName);
-                        var doc = new FlowDocument(new Paragraph(new Run(MainTextBox.Text)))
+                        var doc = new FlowDocument(new Paragraph(new Run(MainTextBox.Text)) { Margin = new Thickness(0) })
                         {
-                            PagePadding = new Thickness(0),
+                            PagePadding = new Thickness(16, 12, 16, 12),
                             FontFamily = ff,
                             FontSize = SettingsService.Current.FontSize,
                             TextAlignment = TextAlignment.Left
@@ -245,9 +245,9 @@ namespace NotepadByFerryPot.Controls
                 catch
                 {
                     var ff = GetFormattedFontFamily(SettingsService.Current.FontFamilyName);
-                    var doc = new FlowDocument(new Paragraph(new Run(MainTextBox.Text)))
+                    var doc = new FlowDocument(new Paragraph(new Run(MainTextBox.Text)) { Margin = new Thickness(0) })
                     {
-                        PagePadding = new Thickness(0),
+                        PagePadding = new Thickness(16, 12, 16, 12),
                         FontFamily = ff,
                         FontSize = SettingsService.Current.FontSize,
                         TextAlignment = TextAlignment.Left
@@ -427,6 +427,44 @@ namespace NotepadByFerryPot.Controls
                 }
             }
             catch { }
+        }
+
+        #endregion
+
+        #region Empty Area Mouse Interaction
+
+        private void SyntaxViewGrid_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.OriginalSource != MainTextBox)
+            {
+                MainTextBox.Focus();
+                var pt = e.GetPosition(MainTextBox);
+                int charIndex = MainTextBox.GetCharacterIndexFromPoint(pt, true);
+                if (charIndex >= 0)
+                {
+                    MainTextBox.CaretIndex = charIndex;
+                }
+                else
+                {
+                    MainTextBox.CaretIndex = MainTextBox.Text.Length;
+                }
+            }
+        }
+
+        private void FormattedRichTextBox_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            var pt = e.GetPosition(FormattedRichTextBox);
+            var tp = FormattedRichTextBox.GetPositionFromPoint(pt, true);
+            if (tp != null)
+            {
+                FormattedRichTextBox.Focus();
+                FormattedRichTextBox.CaretPosition = tp;
+            }
+            else if (FormattedRichTextBox.Document != null)
+            {
+                FormattedRichTextBox.Focus();
+                FormattedRichTextBox.CaretPosition = FormattedRichTextBox.Document.ContentEnd;
+            }
         }
 
         #endregion

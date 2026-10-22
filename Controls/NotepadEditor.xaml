@@ -6,8 +6,15 @@
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
     <Grid Background="{DynamicResource MaterialDesignPaper}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
         <!-- Syntax View (Raw Text Editor with Line Numbers) -->
-        <Grid x:Name="SyntaxViewGrid" Visibility="Visible">
+        <Grid x:Name="SyntaxViewGrid" Grid.Row="0" Visibility="Visible"
+              VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
+              Background="Transparent"
+              MouseLeftButtonDown="SyntaxViewGrid_MouseLeftButtonDown">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" x:Name="LineNumbersColumn" />
                 <ColumnDefinition Width="*" />
@@ -18,7 +25,7 @@
                     Background="{DynamicResource MaterialDesignCardBackground}"
                     BorderBrush="{DynamicResource MaterialDesignDivider}"
                     BorderThickness="0,0,1,0"
-                    Padding="8,16,8,16"
+                    Padding="8,12,8,12"
                     VerticalAlignment="Stretch"
                     x:Name="LineNumbersBorder">
                 <ScrollViewer x:Name="LineNumbersScrollViewer"
@@ -46,11 +53,12 @@
                      VerticalScrollBarVisibility="Auto"
                      HorizontalScrollBarVisibility="Auto"
                      BorderThickness="0"
-                     Padding="16"
+                     Padding="16,12,16,12"
                      VerticalContentAlignment="Top"
                      HorizontalContentAlignment="Left"
                      VerticalAlignment="Stretch"
                      HorizontalAlignment="Stretch"
+                     MinHeight="0"
                      Background="Transparent"
                      Foreground="{DynamicResource MaterialDesignBody}"
                      CaretBrush="{DynamicResource MaterialDesignBody}"
@@ -68,17 +76,19 @@
 
         <!-- Formatted View (Editable Rich Text FlowDocument) -->
         <RichTextBox x:Name="FormattedRichTextBox"
+                     Grid.Row="0"
                      Visibility="Collapsed"
                      AcceptsReturn="True"
                      AcceptsTab="True"
                      VerticalScrollBarVisibility="Auto"
                      HorizontalScrollBarVisibility="Disabled"
                      BorderThickness="0"
-                     Padding="16"
+                     Padding="0"
                      VerticalContentAlignment="Top"
                      HorizontalContentAlignment="Left"
                      VerticalAlignment="Stretch"
                      HorizontalAlignment="Stretch"
+                     MinHeight="0"
                      Background="Transparent"
                      Foreground="{DynamicResource MaterialDesignBody}"
                      CaretBrush="{DynamicResource MaterialDesignBody}"
@@ -90,9 +100,16 @@
                      FontSize="15"
                      SelectionChanged="FormattedRichTextBox_SelectionChanged"
                      TextChanged="FormattedRichTextBox_TextChanged"
-                     PreviewKeyDown="FormattedRichTextBox_PreviewKeyDown">
+                     PreviewKeyDown="FormattedRichTextBox_PreviewKeyDown"
+                     PreviewMouseLeftButtonDown="FormattedRichTextBox_PreviewMouseLeftButtonDown">
+            <RichTextBox.Resources>
+                <Style TargetType="{x:Type FlowDocument}">
+                    <Setter Property="PagePadding" Value="16,12,16,12" />
+                    <Setter Property="TextAlignment" Value="Left" />
+                </Style>
+            </RichTextBox.Resources>
             <FlowDocument x:Name="FormattedFlowDocument" 
-                          PagePadding="0" 
+                          PagePadding="16,12,16,12" 
                           TextAlignment="Left"
                           FontFamily="Segoe UI" 
                           FontSize="15"
