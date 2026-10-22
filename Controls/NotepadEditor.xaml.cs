@@ -988,9 +988,9 @@ namespace NotepadByFerryPot.Controls
 
                 var hl = new Hyperlink(new Run(text))
                 {
-                    NavigateUri = new Uri("https://"),
-                    ToolTip = "https://"
+                    NavigateUri = new Uri("https://")
                 };
+                SafeLinkService.ConfigureHyperlink(hl, "https://");
                 try { hl.Foreground = (Brush)Application.Current.FindResource("MaterialDesign.Brush.Primary"); } catch { }
 
                 var p = FormattedRichTextBox.CaretPosition.Paragraph;
@@ -1124,7 +1124,11 @@ namespace NotepadByFerryPot.Controls
             string text = MainTextBox.Text.Substring(selStart, selLen);
 
             // Strip markdown formatting
-            text = System.Text.RegularExpressions.Regex.Replace(text, @"\[([^\]]+)\]\([^\)]+\)", "$1");
+            try
+            {
+                text = System.Text.RegularExpressions.Regex.Replace(text, @"\[([^\]]+)\]\([^\)]+\)", "$1", System.Text.RegularExpressions.RegexOptions.None, TimeSpan.FromSeconds(1));
+            }
+            catch (System.Text.RegularExpressions.RegexMatchTimeoutException) { }
             text = text.Replace("**", "")
                        .Replace("__", "")
                        .Replace("~~", "")
@@ -1232,9 +1236,16 @@ namespace NotepadByFerryPot.Controls
                     if (caret != null)
                     {
                         var p = caret.Paragraph;
-                        if (p != null && p.Tag is string tag && System.Text.RegularExpressions.Regex.IsMatch(tag, @"^h[1-6]$", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                        if (p != null && p.Tag is string tag)
                         {
-                            state.Heading = tag.ToUpper();
+                            bool isHeadingTag = false;
+                            try
+                            {
+                                isHeadingTag = System.Text.RegularExpressions.Regex.IsMatch(tag, @"^h[1-6]$", System.Text.RegularExpressions.RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1));
+                            }
+                            catch { }
+
+                            state.Heading = isHeadingTag ? tag.ToUpper() : "Normal";
                         }
                         else
                         {
