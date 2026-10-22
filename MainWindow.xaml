@@ -247,6 +247,9 @@
                                     <MenuItem Header="H3 — Heading 3 (### )" FontWeight="Medium" FontSize="12" Click="Heading3_Click"/>
                                     <MenuItem Header="H4 — Heading 4 (#### )" FontSize="12" Click="Heading4_Click"/>
                                     <Separator/>
+                                    <MenuItem Header="H5 — Heading 5 (##### )" FontSize="11" Click="Heading5_Click"/>
+                                    <MenuItem Header="H6 — Heading 6 (###### )" FontSize="10" Click="Heading6_Click"/>
+                                    <Separator/>
                                     <MenuItem Header="Paragraph (Normal Text)" Click="Paragraph_Click"/>
                                 </ContextMenu>
                             </Button.ContextMenu>
@@ -315,7 +318,7 @@
                                 materialDesign:ButtonAssist.CornerRadius="4"
                                 Width="28" Height="28" Padding="0"
                                 Margin="2,0,0,0"
-                                ToolTip="Strikethrough (Ctrl+Shift+S)"
+                                ToolTip="Strikethrough (Ctrl+Shift+X)"
                                 Click="Strikethrough_Click">
                             <TextBlock x:Name="StrikethroughToolbarText" Text="S" TextDecorations="Strikethrough" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{DynamicResource MaterialDesignBody}"/>
                         </Button>
@@ -372,10 +375,13 @@
                         <materialDesign:PackIcon Kind="DotsHorizontal" Width="18" Height="18" Foreground="{DynamicResource MaterialDesignBody}"/>
                         <Button.ContextMenu>
                             <ContextMenu x:Name="OverflowToolbarContextMenu">
-                                <MenuItem Header="Heading 1 (H1)" FontWeight="Bold" Click="Heading1_Click"/>
-                                <MenuItem Header="Heading 2 (H2)" FontWeight="SemiBold" Click="Heading2_Click"/>
-                                <MenuItem Header="Heading 3 (H3)" FontWeight="Medium" Click="Heading3_Click"/>
-                                <MenuItem Header="Paragraph (Normal)" Click="Paragraph_Click"/>
+                                <MenuItem Header="H1 — Heading 1 (# )" FontWeight="Bold" FontSize="14" Click="Heading1_Click"/>
+                                <MenuItem Header="H2 — Heading 2 (## )" FontWeight="SemiBold" FontSize="13" Click="Heading2_Click"/>
+                                <MenuItem Header="H3 — Heading 3 (### )" FontWeight="Medium" FontSize="12" Click="Heading3_Click"/>
+                                <MenuItem Header="H4 — Heading 4 (#### )" FontSize="12" Click="Heading4_Click"/>
+                                <MenuItem Header="H5 — Heading 5 (##### )" FontSize="11" Click="Heading5_Click"/>
+                                <MenuItem Header="H6 — Heading 6 (###### )" FontSize="10" Click="Heading6_Click"/>
+                                <MenuItem Header="Paragraph (Normal Text)" Click="Paragraph_Click"/>
                                 <Separator/>
                                 <MenuItem Header="Bold (Ctrl+B)" Click="Bold_Click">
                                     <MenuItem.Icon>
@@ -387,7 +393,7 @@
                                         <TextBlock Text="I" FontStyle="Italic" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"/>
                                     </MenuItem.Icon>
                                 </MenuItem>
-                                <MenuItem Header="Strikethrough (Ctrl+Shift+S)" Click="Strikethrough_Click">
+                                <MenuItem Header="Strikethrough (Ctrl+Shift+X)" Click="Strikethrough_Click">
                                     <MenuItem.Icon>
                                         <TextBlock Text="S" TextDecorations="Strikethrough" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"/>
                                     </MenuItem.Icon>

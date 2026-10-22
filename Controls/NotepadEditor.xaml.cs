@@ -316,6 +316,8 @@ namespace NotepadByFerryPot.Controls
                 {
                     newDoc.PropertyChanged += editor.Doc_PropertyChanged;
                     editor.MainTextBox.Text = newDoc.Content;
+                    editor.MainTextBox.IsReadOnly = newDoc.IsReadOnly;
+                    editor.FormattedRichTextBox.IsReadOnly = newDoc.IsReadOnly;
                     editor.UpdateLineNumbers();
                     if (editor._isFormattedView)
                     {
@@ -325,6 +327,8 @@ namespace NotepadByFerryPot.Controls
                 else
                 {
                     editor.MainTextBox.Text = string.Empty;
+                    editor.MainTextBox.IsReadOnly = false;
+                    editor.FormattedRichTextBox.IsReadOnly = false;
                 }
                 editor.NotifyFormattingStateChanged();
             }
@@ -333,6 +337,11 @@ namespace NotepadByFerryPot.Controls
         private void Doc_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             if (_isSyncing) return;
+            if (e.PropertyName == nameof(NotepadDocument.IsReadOnly) && Document != null)
+            {
+                MainTextBox.IsReadOnly = Document.IsReadOnly;
+                FormattedRichTextBox.IsReadOnly = Document.IsReadOnly;
+            }
             if (e.PropertyName == nameof(NotepadDocument.Content) && Document != null)
             {
                 if (MainTextBox.Text != Document.Content)
@@ -384,6 +393,7 @@ namespace NotepadByFerryPot.Controls
             }
 
             UpdateLineNumbers();
+            NotifyFormattingStateChanged();
         }
 
         private void MainScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
@@ -402,6 +412,7 @@ namespace NotepadByFerryPot.Controls
                 Document.Content = MainTextBox.Text;
             }
             UpdateLineNumbers();
+            NotifyFormattingStateChanged();
         }
 
         private void MainTextBox_SelectionChanged(object sender, RoutedEventArgs e)
@@ -416,6 +427,7 @@ namespace NotepadByFerryPot.Controls
             Document.CurrentLine = line + 1;
             Document.CurrentColumn = col + 1;
             Document.CharacterCount = MainTextBox.Text.Length;
+            NotifyFormattingStateChanged();
         }
 
         #region Formatted View Event Handlers
@@ -491,6 +503,36 @@ namespace NotepadByFerryPot.Controls
             var tp = FormattedRichTextBox.GetPositionFromPoint(pt, true);
             if (tp != null)
             {
+                var p = tp.Paragraph;
+                if (p != null)
+                {
+                    var start = p.ContentStart;
+                    var endCheck = start.GetPositionAtOffset(2, LogicalDirection.Forward) ?? p.ContentEnd;
+                    var range = new TextRange(start, endCheck);
+                    string glyph = range.Text;
+                    if (glyph.StartsWith("☐") || glyph.StartsWith("☑"))
+                    {
+                        var r1 = start.GetCharacterRect(LogicalDirection.Forward);
+                        var r2 = endCheck.GetCharacterRect(LogicalDirection.Backward);
+                        var bounds = new Rect(r1.TopLeft, r2.BottomRight);
+                        bounds.Inflate(6, 6);
+                        if (bounds.Contains(pt) || tp.CompareTo(endCheck) <= 0)
+                        {
+                            if (Document != null && Document.IsReadOnly)
+                            {
+                                e.Handled = true;
+                                return;
+                            }
+                            bool isChecked = glyph.StartsWith("☑");
+                            range.Text = isChecked ? "☐ " : "☑ ";
+                            if (Document != null) Document.IsModified = true;
+                            e.Handled = true;
+                            FormattedRichTextBox.Focus();
+                            return;
+                        }
+                    }
+                }
+
                 FormattedRichTextBox.Focus();
                 FormattedRichTextBox.CaretPosition = tp;
             }
@@ -688,6 +730,8 @@ namespace NotepadByFerryPot.Controls
 
         public void ToggleWrap(string prefix, string suffix)
         {
+            if (Document != null && Document.IsReadOnly) return;
+
             if (_isFormattedView)
             {
                 if (prefix == "**")
@@ -747,6 +791,68 @@ namespace NotepadByFerryPot.Controls
             int selStart = MainTextBox.SelectionStart;
             int selLength = MainTextBox.SelectionLength;
             string text = MainTextBox.Text;
+
+            // Multi-line selection handling
+            if (selLength > 0 && (MainTextBox.SelectedText.Contains('\n') || MainTextBox.SelectedText.Contains('\r')))
+            {
+                string selected = MainTextBox.SelectedText;
+                var parts = System.Text.RegularExpressions.Regex.Split(selected, @"(\r\n|\n|\r)");
+                int nonEmptyCount = 0;
+                bool allWrapped = true;
+                for (int i = 0; i < parts.Length; i += 2)
+                {
+                    if (string.IsNullOrWhiteSpace(parts[i])) continue;
+                    nonEmptyCount++;
+                    string trimmed = parts[i].Trim();
+                    if (!(trimmed.StartsWith(prefix) && trimmed.EndsWith(suffix) && trimmed.Length >= prefix.Length + suffix.Length))
+                    {
+                        allWrapped = false;
+                        break;
+                    }
+                }
+
+                if (allWrapped && nonEmptyCount > 0)
+                {
+                    for (int i = 0; i < parts.Length; i += 2)
+                    {
+                        if (string.IsNullOrWhiteSpace(parts[i])) continue;
+                        string raw = parts[i];
+                        int l = 0; while (l < raw.Length && (raw[l] == ' ' || raw[l] == '\t')) l++;
+                        string indent = raw.Substring(0, l);
+                        int r = raw.Length; while (r > l && (raw[r - 1] == ' ' || raw[r - 1] == '\t')) r--;
+                        string trailing = raw.Substring(r);
+                        string core = raw.Substring(l, r - l);
+
+                        if (core.StartsWith(prefix) && core.EndsWith(suffix) && core.Length >= prefix.Length + suffix.Length)
+                        {
+                            core = core.Substring(prefix.Length, core.Length - prefix.Length - suffix.Length);
+                        }
+                        parts[i] = indent + core + trailing;
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < parts.Length; i += 2)
+                    {
+                        if (string.IsNullOrWhiteSpace(parts[i])) continue;
+                        string raw = parts[i];
+                        int l = 0; while (l < raw.Length && (raw[l] == ' ' || raw[l] == '\t')) l++;
+                        string indent = raw.Substring(0, l);
+                        int r = raw.Length; while (r > l && (raw[r - 1] == ' ' || raw[r - 1] == '\t')) r--;
+                        string trailing = raw.Substring(r);
+                        string core = raw.Substring(l, r - l);
+
+                        core = StripWrap(core, prefix, suffix);
+                        parts[i] = indent + prefix + core + suffix + trailing;
+                    }
+                }
+
+                string replacement = string.Join("", parts);
+                MainTextBox.SelectedText = replacement;
+                MainTextBox.Select(selStart, replacement.Length);
+                MainTextBox.Focus();
+                return;
+            }
 
             // If no text is selected, check if caret is inside a word
             if (selLength == 0 && text.Length > 0)
@@ -808,6 +914,13 @@ namespace NotepadByFerryPot.Controls
                     MainTextBox.SelectedText = selected;
                     MainTextBox.Select(selStart - prefix.Length, selected.Length);
                 }
+                // Partially wrapped selection (e.g. "foo **bar**"): unwrap/strip existing markers
+                else if (HasWrap(selected, prefix))
+                {
+                    string unwrapped = StripWrap(selected, prefix, suffix);
+                    MainTextBox.SelectedText = unwrapped;
+                    MainTextBox.Select(selStart, unwrapped.Length);
+                }
                 else
                 {
                     string wrapped = prefix + selected + suffix;
@@ -835,8 +948,30 @@ namespace NotepadByFerryPot.Controls
             MainTextBox.Focus();
         }
 
+        private static string StripWrap(string text, string prefix, string suffix)
+        {
+            if (string.IsNullOrEmpty(text)) return text;
+            if (prefix == "**") return text.Replace("**", "");
+            if (prefix == "~~") return text.Replace("~~", "");
+            if (prefix == "*") return System.Text.RegularExpressions.Regex.Replace(text, @"(?<!\*)\*(?!\*)", "");
+            if (prefix == "`") return text.Replace("`", "");
+            return text.Replace(prefix, "").Replace(suffix, "");
+        }
+
+        private static bool HasWrap(string text, string prefix)
+        {
+            if (string.IsNullOrEmpty(text)) return false;
+            if (prefix == "**") return text.Contains("**");
+            if (prefix == "~~") return text.Contains("~~");
+            if (prefix == "*") return System.Text.RegularExpressions.Regex.IsMatch(text, @"(?<!\*)\*(?!\*)");
+            if (prefix == "`") return text.Contains("`");
+            return text.Contains(prefix);
+        }
+
         public void ApplyHeading(string prefix)
         {
+            if (Document != null && Document.IsReadOnly) return;
+
             if (_isFormattedView)
             {
                 var caret = FormattedRichTextBox.CaretPosition;
@@ -932,9 +1067,80 @@ namespace NotepadByFerryPot.Controls
 
         public void ApplyList(string listType)
         {
+            if (Document != null && Document.IsReadOnly) return;
+
             if (_isFormattedView)
             {
-                if (listType == "number")
+                if (listType == "check")
+                {
+                    var sel = FormattedRichTextBox.Selection;
+                    if (!sel.IsEmpty)
+                    {
+                        var paragraphs = new List<Paragraph>();
+                        TextPointer cur = sel.Start;
+                        while (cur != null && cur.CompareTo(sel.End) <= 0)
+                        {
+                            var p = cur.Paragraph;
+                            if (p != null && !paragraphs.Contains(p))
+                            {
+                                paragraphs.Add(p);
+                            }
+                            cur = cur.GetNextContextPosition(LogicalDirection.Forward);
+                        }
+
+                        if (paragraphs.Count > 0)
+                        {
+                            bool allHaveCheck = paragraphs.All(p =>
+                            {
+                                var tr = new TextRange(p.ContentStart, p.ContentStart.GetPositionAtOffset(2, LogicalDirection.Forward) ?? p.ContentEnd);
+                                return tr.Text.StartsWith("☐ ") || tr.Text.StartsWith("☑ ");
+                            });
+
+                            foreach (var p in paragraphs)
+                            {
+                                var tr = new TextRange(p.ContentStart, p.ContentStart.GetPositionAtOffset(2, LogicalDirection.Forward) ?? p.ContentEnd);
+                                if (allHaveCheck)
+                                {
+                                    if (tr.Text.StartsWith("☐ ") || tr.Text.StartsWith("☑ "))
+                                    {
+                                        tr.Text = "";
+                                    }
+                                }
+                                else
+                                {
+                                    if (!tr.Text.StartsWith("☐ ") && !tr.Text.StartsWith("☑ "))
+                                    {
+                                        p.ContentStart.InsertTextInRun("☐ ");
+                                    }
+                                }
+                            }
+                            if (Document != null) Document.IsModified = true;
+                            NotifyFormattingStateChanged();
+                            FormattedRichTextBox.Focus();
+                            return;
+                        }
+                    }
+
+                    var caret = FormattedRichTextBox.CaretPosition;
+                    var targetP = caret?.Paragraph;
+                    if (targetP != null)
+                    {
+                        var tr = new TextRange(targetP.ContentStart, targetP.ContentStart.GetPositionAtOffset(2, LogicalDirection.Forward) ?? targetP.ContentEnd);
+                        if (tr.Text.StartsWith("☐ ") || tr.Text.StartsWith("☑ "))
+                        {
+                            tr.Text = "";
+                        }
+                        else
+                        {
+                            targetP.ContentStart.InsertTextInRun("☐ ");
+                        }
+                        if (Document != null) Document.IsModified = true;
+                        NotifyFormattingStateChanged();
+                        FormattedRichTextBox.Focus();
+                        return;
+                    }
+                }
+                else if (listType == "number")
                 {
                     EditingCommands.ToggleNumbering.Execute(null, FormattedRichTextBox);
                 }
@@ -1012,6 +1218,8 @@ namespace NotepadByFerryPot.Controls
 
         public void InsertLink()
         {
+            if (Document != null && Document.IsReadOnly) return;
+
             Window? owner = Window.GetWindow(this);
 
             if (_isFormattedView)
@@ -1084,6 +1292,8 @@ namespace NotepadByFerryPot.Controls
 
         public void InsertTable(int rows = 3, int cols = 3)
         {
+            if (Document != null && Document.IsReadOnly) return;
+
             if (_isFormattedView)
             {
                 var tableLines = new List<string>();
@@ -1102,9 +1312,59 @@ namespace NotepadByFerryPot.Controls
                     tableLines.Add("| " + string.Join(" | ", rowCells) + " |");
                 }
 
-                var brush = (Brush)Application.Current.FindResource("MaterialDesignBody");
+                Brush brush;
+                try
+                {
+                    brush = (Application.Current?.TryFindResource("MaterialDesignBody") as Brush) ?? Brushes.Black;
+                }
+                catch
+                {
+                    brush = Brushes.Black;
+                }
+
                 var tableBlock = MarkdownParserService.CreateTable(tableLines, SettingsService.Current.FontSize, brush);
-                FormattedRichTextBox.Document.Blocks.Add(tableBlock);
+
+                var caret = FormattedRichTextBox.CaretPosition;
+                Block? targetBlock = null;
+                DependencyObject? cur = caret?.Paragraph ?? (DependencyObject?)caret?.Parent;
+                while (cur != null)
+                {
+                    if (cur is Block b && FormattedRichTextBox.Document.Blocks.Contains(b))
+                    {
+                        targetBlock = b;
+                        break;
+                    }
+                    if (cur is FrameworkContentElement fce)
+                        cur = fce.Parent;
+                    else if (cur is FrameworkElement fe)
+                        cur = fe.Parent;
+                    else
+                        cur = LogicalTreeHelper.GetParent(cur);
+                }
+
+                var trailingParagraph = new Paragraph { Margin = new Thickness(0, 0, 0, SettingsService.Current.FontSize * 0.4) };
+
+                if (targetBlock != null)
+                {
+                    FormattedRichTextBox.Document.Blocks.InsertAfter(targetBlock, tableBlock);
+                    FormattedRichTextBox.Document.Blocks.InsertAfter(tableBlock, trailingParagraph);
+                }
+                else
+                {
+                    FormattedRichTextBox.Document.Blocks.Add(tableBlock);
+                    FormattedRichTextBox.Document.Blocks.Add(trailingParagraph);
+                }
+
+                if (tableBlock is Table t && t.RowGroups.Count > 0 && t.RowGroups[0].Rows.Count > 0 && t.RowGroups[0].Rows[0].Cells.Count > 0)
+                {
+                    var firstCell = t.RowGroups[0].Rows[0].Cells[0];
+                    if (firstCell.Blocks.FirstBlock != null)
+                    {
+                        FormattedRichTextBox.CaretPosition = firstCell.Blocks.FirstBlock.ContentStart;
+                    }
+                }
+
+                if (Document != null) Document.IsModified = true;
                 FormattedRichTextBox.Focus();
                 return;
             }
@@ -1154,6 +1414,8 @@ namespace NotepadByFerryPot.Controls
 
         public void ClearFormatting()
         {
+            if (Document != null && Document.IsReadOnly) return;
+
             if (_isFormattedView)
             {
                 var range = new TextRange(FormattedRichTextBox.Selection.Start, FormattedRichTextBox.Selection.End);
@@ -1265,6 +1527,26 @@ namespace NotepadByFerryPot.Controls
             var state = new EditorFormattingState();
             if (!_isFormattedView || FormattedRichTextBox == null || FormattedRichTextBox.Document == null)
             {
+                if (!_isFormattedView && MainTextBox != null && MainTextBox.Text.Length > 0)
+                {
+                    try
+                    {
+                        int caretIndex = MainTextBox.CaretIndex;
+                        int lineIndex = MainTextBox.GetLineIndexFromCharacterIndex(caretIndex);
+                        string lineText = MainTextBox.GetLineText(lineIndex).TrimStart();
+                        int h = 0;
+                        while (h < lineText.Length && lineText[h] == '#') h++;
+                        if (h >= 1 && h <= 6 && h < lineText.Length && lineText[h] == ' ')
+                        {
+                            state.Heading = "H" + h;
+                        }
+                        else
+                        {
+                            state.Heading = "Normal";
+                        }
+                    }
+                    catch { }
+                }
                 return state;
             }
 
@@ -1313,6 +1595,14 @@ namespace NotepadByFerryPot.Controls
                         }
 
                         DependencyObject? current = p ?? (DependencyObject)caret.Parent;
+                        if (p != null)
+                        {
+                            var tr = new TextRange(p.ContentStart, p.ContentStart.GetPositionAtOffset(2, LogicalDirection.Forward) ?? p.ContentEnd);
+                            if (tr.Text.StartsWith("☐ ") || tr.Text.StartsWith("☑ "))
+                            {
+                                state.IsList = true;
+                            }
+                        }
                         while (current != null && !(current is FlowDocument))
                         {
                             if (current is ListItem || current is System.Windows.Documents.List)

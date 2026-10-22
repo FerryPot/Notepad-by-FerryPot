@@ -204,6 +204,19 @@ namespace NotepadByFerryPot.Services
                         continue;
                     }
 
+                    if (pText.StartsWith("☐ "))
+                    {
+                        sb.AppendLine("- [ ] " + pText.Substring(2));
+                        sb.AppendLine();
+                        continue;
+                    }
+                    if (pText.StartsWith("☑ "))
+                    {
+                        sb.AppendLine("- [x] " + pText.Substring(2));
+                        sb.AppendLine();
+                        continue;
+                    }
+
                     if (string.IsNullOrWhiteSpace(pText))
                     {
                         sb.AppendLine();
@@ -244,7 +257,15 @@ namespace NotepadByFerryPot.Services
                         }
 
                         itemText = itemText.Trim();
-                        if (itemText.StartsWith("- [ ]") || itemText.StartsWith("- [x]"))
+                        if (itemText.StartsWith("☐ "))
+                        {
+                            sb.AppendLine("- [ ] " + itemText.Substring(2));
+                        }
+                        else if (itemText.StartsWith("☑ "))
+                        {
+                            sb.AppendLine("- [x] " + itemText.Substring(2));
+                        }
+                        else if (itemText.StartsWith("- [ ]") || itemText.StartsWith("- [x]"))
                         {
                             sb.AppendLine(itemText);
                         }
@@ -698,11 +719,12 @@ namespace NotepadByFerryPot.Services
 
         private static Block CreateList(List<(string marker, string text)> items, bool isNumbered, double baseFontSize, Brush foreground)
         {
+            bool isChecklist = items.Any(it => it.marker == "- [ ]" || it.marker == "- [x]");
             var list = new List
             {
-                MarkerStyle = isNumbered ? TextMarkerStyle.Decimal : TextMarkerStyle.Disc,
+                MarkerStyle = isChecklist ? TextMarkerStyle.None : (isNumbered ? TextMarkerStyle.Decimal : TextMarkerStyle.Disc),
                 Margin = new Thickness(0, 4, 0, 10),
-                Padding = new Thickness(24, 0, 0, 0)
+                Padding = isChecklist ? new Thickness(8, 0, 0, 0) : new Thickness(24, 0, 0, 0)
             };
 
             foreach (var item in items)
@@ -710,25 +732,10 @@ namespace NotepadByFerryPot.Services
                 if (item.marker == "- [ ]" || item.marker == "- [x]")
                 {
                     bool isChecked = item.marker == "- [x]";
-                    var sp = new StackPanel { Orientation = Orientation.Horizontal };
-                    var cb = new CheckBox
-                    {
-                        IsChecked = isChecked,
-                        IsEnabled = false,
-                        Margin = new Thickness(0, 0, 8, 0),
-                        VerticalAlignment = VerticalAlignment.Center
-                    };
-                    var tb = new TextBlock
-                    {
-                        Text = item.text,
-                        VerticalAlignment = VerticalAlignment.Center,
-                        TextDecorations = isChecked ? TextDecorations.Strikethrough : null
-                    };
-                    sp.Children.Add(cb);
-                    sp.Children.Add(tb);
-                    var li = new ListItem();
-                    li.Blocks.Add(new BlockUIContainer(sp));
-                    list.ListItems.Add(li);
+                    string glyph = isChecked ? "☑ " : "☐ ";
+                    var p = new Paragraph { Margin = new Thickness(0, 2, 0, 2) };
+                    AddFormattedInlines(p, glyph + item.text, foreground);
+                    list.ListItems.Add(new ListItem(p));
                 }
                 else
                 {
@@ -808,7 +815,7 @@ namespace NotepadByFerryPot.Services
         private static bool IsListLine(string line)
         {
             if (line.StartsWith("- ") || line.StartsWith("* ") || line.StartsWith("+ ")) return true;
-            if (line.StartsWith("- [ ] ") || line.StartsWith("- [x] ")) return true;
+            if (line.StartsWith("- [ ] ") || line.StartsWith("- [x] ", StringComparison.OrdinalIgnoreCase)) return true;
             int dot = line.IndexOf(". ");
             if (dot > 0 && int.TryParse(line.Substring(0, dot), out _)) return true;
             return false;
@@ -817,7 +824,7 @@ namespace NotepadByFerryPot.Services
         private static (string marker, string text) ParseListLine(string line)
         {
             if (line.StartsWith("- [ ] ")) return ("- [ ]", line.Substring(6));
-            if (line.StartsWith("- [x] ")) return ("- [x]", line.Substring(6));
+            if (line.StartsWith("- [x] ", StringComparison.OrdinalIgnoreCase)) return ("- [x]", line.Substring(6));
             if (line.StartsWith("- ") || line.StartsWith("* ") || line.StartsWith("+ ")) return ("-", line.Substring(2));
             int dot = line.IndexOf(". ");
             if (dot > 0 && int.TryParse(line.Substring(0, dot), out _))

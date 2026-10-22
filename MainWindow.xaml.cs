@@ -942,11 +942,13 @@ namespace NotepadByFerryPot
             }
         }
 
-        private void Heading1_Click(object sender, RoutedEventArgs e) => ActiveEditor.ApplyHeading("# ");
-        private void Heading2_Click(object sender, RoutedEventArgs e) => ActiveEditor.ApplyHeading("## ");
-        private void Heading3_Click(object sender, RoutedEventArgs e) => ActiveEditor.ApplyHeading("### ");
-        private void Heading4_Click(object sender, RoutedEventArgs e) => ActiveEditor.ApplyHeading("#### ");
-        private void Paragraph_Click(object sender, RoutedEventArgs e) => ActiveEditor.ApplyHeading("");
+        private void Heading1_Click(object sender, RoutedEventArgs e) { if (_activeDocument?.IsReadOnly == true) return; ActiveEditor.ApplyHeading("# "); }
+        private void Heading2_Click(object sender, RoutedEventArgs e) { if (_activeDocument?.IsReadOnly == true) return; ActiveEditor.ApplyHeading("## "); }
+        private void Heading3_Click(object sender, RoutedEventArgs e) { if (_activeDocument?.IsReadOnly == true) return; ActiveEditor.ApplyHeading("### "); }
+        private void Heading4_Click(object sender, RoutedEventArgs e) { if (_activeDocument?.IsReadOnly == true) return; ActiveEditor.ApplyHeading("#### "); }
+        private void Heading5_Click(object sender, RoutedEventArgs e) { if (_activeDocument?.IsReadOnly == true) return; ActiveEditor.ApplyHeading("##### "); }
+        private void Heading6_Click(object sender, RoutedEventArgs e) { if (_activeDocument?.IsReadOnly == true) return; ActiveEditor.ApplyHeading("###### "); }
+        private void Paragraph_Click(object sender, RoutedEventArgs e) { if (_activeDocument?.IsReadOnly == true) return; ActiveEditor.ApplyHeading(""); }
 
         private void ListMenu_Click(object sender, RoutedEventArgs e)
         {
@@ -957,14 +959,14 @@ namespace NotepadByFerryPot
             }
         }
 
-        private void BulletList_Click(object sender, RoutedEventArgs e) => ActiveEditor.ApplyList("bullet");
-        private void NumberedList_Click(object sender, RoutedEventArgs e) => ActiveEditor.ApplyList("number");
-        private void Checklist_Click(object sender, RoutedEventArgs e) => ActiveEditor.ApplyList("check");
+        private void BulletList_Click(object sender, RoutedEventArgs e) { if (_activeDocument?.IsReadOnly == true) return; ActiveEditor.ApplyList("bullet"); }
+        private void NumberedList_Click(object sender, RoutedEventArgs e) { if (_activeDocument?.IsReadOnly == true) return; ActiveEditor.ApplyList("number"); }
+        private void Checklist_Click(object sender, RoutedEventArgs e) { if (_activeDocument?.IsReadOnly == true) return; ActiveEditor.ApplyList("check"); }
 
-        private void Bold_Click(object sender, RoutedEventArgs e) => ActiveEditor.ToggleWrap("**", "**");
-        private void Italic_Click(object sender, RoutedEventArgs e) => ActiveEditor.ToggleWrap("*", "*");
-        private void Strikethrough_Click(object sender, RoutedEventArgs e) => ActiveEditor.ToggleWrap("~~", "~~");
-        private void Link_Click(object sender, RoutedEventArgs e) => ActiveEditor.InsertLink();
+        private void Bold_Click(object sender, RoutedEventArgs e) { if (_activeDocument?.IsReadOnly == true) return; ActiveEditor.ToggleWrap("**", "**"); }
+        private void Italic_Click(object sender, RoutedEventArgs e) { if (_activeDocument?.IsReadOnly == true) return; ActiveEditor.ToggleWrap("*", "*"); }
+        private void Strikethrough_Click(object sender, RoutedEventArgs e) { if (_activeDocument?.IsReadOnly == true) return; ActiveEditor.ToggleWrap("~~", "~~"); }
+        private void Link_Click(object sender, RoutedEventArgs e) { if (_activeDocument?.IsReadOnly == true) return; ActiveEditor.InsertLink(); }
 
         private void TableMenu_Click(object sender, RoutedEventArgs e)
         {
@@ -975,11 +977,11 @@ namespace NotepadByFerryPot
             }
         }
 
-        private void Table2x2_Click(object sender, RoutedEventArgs e) => ActiveEditor.InsertTable(2, 2);
-        private void Table3x3_Click(object sender, RoutedEventArgs e) => ActiveEditor.InsertTable(3, 3);
-        private void Table4x4_Click(object sender, RoutedEventArgs e) => ActiveEditor.InsertTable(4, 4);
+        private void Table2x2_Click(object sender, RoutedEventArgs e) { if (_activeDocument?.IsReadOnly == true) return; ActiveEditor.InsertTable(2, 2); }
+        private void Table3x3_Click(object sender, RoutedEventArgs e) { if (_activeDocument?.IsReadOnly == true) return; ActiveEditor.InsertTable(3, 3); }
+        private void Table4x4_Click(object sender, RoutedEventArgs e) { if (_activeDocument?.IsReadOnly == true) return; ActiveEditor.InsertTable(4, 4); }
 
-        private void ClearFormatting_Click(object sender, RoutedEventArgs e) => ActiveEditor.ClearFormatting();
+        private void ClearFormatting_Click(object sender, RoutedEventArgs e) { if (_activeDocument?.IsReadOnly == true) return; ActiveEditor.ClearFormatting(); }
 
         private void OverflowToolbar_Click(object sender, RoutedEventArgs e)
         {
@@ -1015,6 +1017,16 @@ namespace NotepadByFerryPot
             }
 
             state ??= new EditorFormattingState();
+
+            bool isReadOnly = _activeDocument?.IsReadOnly ?? false;
+            if (FullToolbarPanel != null)
+            {
+                FullToolbarPanel.IsEnabled = !isReadOnly;
+            }
+            if (OverflowToolbarButton != null)
+            {
+                OverflowToolbarButton.IsEnabled = !isReadOnly;
+            }
 
             // Accent brush (Amber)
             Brush primaryBrush;
@@ -1310,7 +1322,7 @@ namespace NotepadByFerryPot
                 e.Handled = true;
                 Link_Click(sender, e);
             }
-            else if (ctrl && shift && (e.Key == Key.S || e.Key == Key.X))
+            else if (ctrl && shift && e.Key == Key.X)
             {
                 e.Handled = true;
                 Strikethrough_Click(sender, e);
