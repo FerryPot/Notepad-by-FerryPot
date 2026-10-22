@@ -35,9 +35,8 @@ namespace NotepadByFerryPot
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            // Create initial document
-            CreateNewTab();
             ApplySettingsToWindow();
+            CreateNewTab();
             UpdateViewModeUI();
             UpdateToolbarResponsiveLayout();
             ActiveEditor.FormattingStateChanged += (s, state) => UpdateFormattingToolbarState(state);
@@ -74,7 +73,8 @@ namespace NotepadByFerryPot
                 Content = content ?? string.Empty,
                 SavedContent = content ?? string.Empty,
                 FilePath = filePath,
-                IsModified = false
+                IsModified = false,
+                IsFormattedView = SettingsService.Current.IsDefaultViewFormatted
             };
 
             doc.PropertyChanged += Document_PropertyChanged;
@@ -92,11 +92,17 @@ namespace NotepadByFerryPot
                 ActiveEditor.SyncToDocument();
             }
             _activeDocument = doc;
+
+            bool isFormatted = doc.IsFormattedView ?? SettingsService.Current.IsDefaultViewFormatted;
+            doc.IsFormattedView = isFormatted;
+
             if (ActiveEditor != null)
             {
+                ActiveEditor.SetViewMode(isFormatted);
                 ActiveEditor.Document = doc;
             }
 
+            UpdateViewModeUI();
             UpdateTitle();
             UpdateStatusBar();
             RebuildTabsUI();
@@ -256,6 +262,26 @@ namespace NotepadByFerryPot
             TabsStackPanel.Children.Add(addBtn);
         }
 
+        private static bool DocumentNeedsSavePrompt(NotepadDocument doc)
+        {
+            // If the document has no file path on disk (untitled document):
+            if (string.IsNullOrEmpty(doc.FilePath))
+            {
+                // If content is empty or contains only whitespace/newlines, do NOT warn
+                if (string.IsNullOrWhiteSpace(doc.Content))
+                {
+                    return false;
+                }
+
+                // If it has real content, warn if it has unsaved changes
+                return doc.IsModified || doc.Content != doc.SavedContent || !string.IsNullOrEmpty(doc.Content);
+            }
+
+            // If the document is linked to a file on disk:
+            // Warn if it has unsaved changes (even if user deleted all text)
+            return doc.IsModified || doc.Content != doc.SavedContent;
+        }
+
         private bool CloseTab(NotepadDocument doc)
         {
             // Sync editor text first if this is the active document
@@ -264,11 +290,7 @@ namespace NotepadByFerryPot
                 ActiveEditor.SyncToDocument();
             }
 
-            bool hasUnsaved = doc.IsModified || 
-                              doc.Content != doc.SavedContent || 
-                              (!string.IsNullOrEmpty(doc.Content) && string.IsNullOrEmpty(doc.FilePath));
-
-            if (hasUnsaved)
+            if (DocumentNeedsSavePrompt(doc))
             {
                 var result = MessageBox.Show(
                     $"Do you want to save changes to \"{doc.Title}\"?\n\nAny unsaved changes will be lost if you do not save.",
@@ -552,7 +574,9 @@ namespace NotepadByFerryPot
                     targetDoc.Encoding = encoding;
                     targetDoc.LineEnding = lineEnding;
                     targetDoc.IsReadOnly = isReadOnly;
+                    targetDoc.IsFormattedView = SettingsService.Current.IsDefaultViewFormatted;
                     targetDoc.MarkAsSaved(filePath);
+                    SetActiveDocument(targetDoc);
                 }
                 else
                 {
@@ -560,7 +584,9 @@ namespace NotepadByFerryPot
                     targetDoc.Encoding = encoding;
                     targetDoc.LineEnding = lineEnding;
                     targetDoc.IsReadOnly = isReadOnly;
+                    targetDoc.IsFormattedView = SettingsService.Current.IsDefaultViewFormatted;
                     targetDoc.MarkAsSaved(filePath);
+                    SetActiveDocument(targetDoc);
                 }
 
                 UpdateTitle();
@@ -1078,6 +1104,10 @@ namespace NotepadByFerryPot
 
         private void SetViewMode(bool formatted)
         {
+            if (_activeDocument != null)
+            {
+                _activeDocument.IsFormattedView = formatted;
+            }
             ActiveEditor.SetViewMode(formatted);
             UpdateViewModeUI();
             UpdateFormattingToolbarState(ActiveEditor?.GetCurrentFormattingState());
@@ -1328,11 +1358,7 @@ namespace NotepadByFerryPot
             // Check all documents for unsaved content
             foreach (var doc in Documents)
             {
-                bool hasUnsaved = doc.IsModified || 
-                                  doc.Content != doc.SavedContent || 
-                                  (!string.IsNullOrEmpty(doc.Content) && string.IsNullOrEmpty(doc.FilePath));
-
-                if (hasUnsaved)
+                if (DocumentNeedsSavePrompt(doc))
                 {
                     SetActiveDocument(doc);
                     var result = MessageBox.Show(

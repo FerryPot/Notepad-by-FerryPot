@@ -17,7 +17,7 @@ namespace NotepadByFerryPot.Services
         {
             var doc = new FlowDocument
             {
-                PagePadding = new Thickness(16, 12, 16, 12),
+                PagePadding = new Thickness(24, 20, 24, 20),
                 FontFamily = fontFamily,
                 FontSize = baseFontSize,
                 LineHeight = baseFontSize * 1.5,

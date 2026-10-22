@@ -58,6 +58,13 @@ namespace NotepadByFerryPot.Models
             }
         }
 
+        private bool? _isFormattedView;
+        public bool? IsFormattedView
+        {
+            get => _isFormattedView;
+            set => SetProperty(ref _isFormattedView, value);
+        }
+
         public string? FilePath
         {
             get => _filePath;

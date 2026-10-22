@@ -96,6 +96,11 @@ namespace NotepadByFerryPot.Services
         public bool FocusMode { get; set; } = false;
         public double ZoomLevel { get; set; } = 100.0;
         public bool ShowFormattingToolbar { get; set; } = true;
+        public string DefaultView { get; set; } = "Formatted";
+
+        [JsonIgnore]
+        public bool IsDefaultViewFormatted => !DefaultView.Equals("Markdown syntax", StringComparison.OrdinalIgnoreCase) &&
+                                              !DefaultView.Equals("Markdown", StringComparison.OrdinalIgnoreCase);
 
         public void ValidateAndClamp()
         {
@@ -137,6 +142,14 @@ namespace NotepadByFerryPot.Services
             else
             {
                 ZoomLevel = Math.Clamp(ZoomLevel, 10.0, 500.0);
+            }
+
+            if (string.IsNullOrWhiteSpace(DefaultView) ||
+                (!DefaultView.Equals("Formatted", StringComparison.OrdinalIgnoreCase) &&
+                 !DefaultView.Equals("Markdown syntax", StringComparison.OrdinalIgnoreCase) &&
+                 !DefaultView.Equals("Markdown", StringComparison.OrdinalIgnoreCase)))
+            {
+                DefaultView = "Formatted";
             }
         }
     }

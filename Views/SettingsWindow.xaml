@@ -221,6 +221,17 @@
                                       Style="{StaticResource MaterialDesignOutlinedComboBox}"
                                       Width="200" HorizontalAlignment="Left"
                                       SelectionChanged="SettingChanged"/>
+
+                            <Separator Margin="0,16,0,16"/>
+
+                            <TextBlock Text="DEFAULT VIEW" Style="{StaticResource MaterialDesignOverlineTextBlock}" Margin="0,0,0,6"/>
+                            <ComboBox x:Name="DefaultViewComboBox" 
+                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                      Width="200" HorizontalAlignment="Left"
+                                      SelectionChanged="SettingChanged">
+                                <ComboBoxItem Content="Formatted" />
+                                <ComboBoxItem Content="Markdown syntax" />
+                            </ComboBox>
                         </StackPanel>
                     </Border>
                 </StackPanel>

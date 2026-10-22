@@ -77,6 +77,8 @@ namespace NotepadByFerryPot.Views
                 8 => 2,
                 _ => 1
             };
+
+            DefaultViewComboBox.SelectedIndex = s.IsDefaultViewFormatted ? 0 : 1;
         }
 
         private void NavigationListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -171,6 +173,8 @@ namespace NotepadByFerryPot.Views
                 2 => 8,
                 _ => 4
             };
+
+            s.DefaultView = DefaultViewComboBox.SelectedIndex == 1 ? "Markdown syntax" : "Formatted";
 
             ThemeService.ApplyTheme(s);
             SettingsService.Save();

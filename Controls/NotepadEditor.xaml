@@ -11,7 +11,7 @@
         </Grid.RowDefinitions>
 
         <!-- Syntax View (Raw Text Editor with Line Numbers) -->
-        <Grid x:Name="SyntaxViewGrid" Grid.Row="0" Visibility="Visible"
+        <Grid x:Name="SyntaxViewGrid" Grid.Row="0" Visibility="Collapsed"
               VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
               Background="Transparent"
               MouseLeftButtonDown="SyntaxViewGrid_MouseLeftButtonDown">
@@ -25,7 +25,7 @@
                     Background="{DynamicResource MaterialDesignCardBackground}"
                     BorderBrush="{DynamicResource MaterialDesignDivider}"
                     BorderThickness="0,0,1,0"
-                    Padding="8,12,8,12"
+                    Padding="8,20,8,20"
                     VerticalAlignment="Stretch"
                     x:Name="LineNumbersBorder">
                 <ScrollViewer x:Name="LineNumbersScrollViewer"
@@ -53,7 +53,7 @@
                      VerticalScrollBarVisibility="Auto"
                      HorizontalScrollBarVisibility="Auto"
                      BorderThickness="0"
-                     Padding="16,12,16,12"
+                     Padding="24,20,24,20"
                      VerticalContentAlignment="Top"
                      HorizontalContentAlignment="Left"
                      VerticalAlignment="Stretch"
@@ -77,7 +77,7 @@
         <!-- Formatted View (Editable Rich Text FlowDocument) -->
         <RichTextBox x:Name="FormattedRichTextBox"
                      Grid.Row="0"
-                     Visibility="Collapsed"
+                     Visibility="Visible"
                      AcceptsReturn="True"
                      AcceptsTab="True"
                      VerticalScrollBarVisibility="Auto"
@@ -104,12 +104,12 @@
                      PreviewMouseLeftButtonDown="FormattedRichTextBox_PreviewMouseLeftButtonDown">
             <RichTextBox.Resources>
                 <Style TargetType="{x:Type FlowDocument}">
-                    <Setter Property="PagePadding" Value="16,12,16,12" />
+                    <Setter Property="PagePadding" Value="24,20,24,20" />
                     <Setter Property="TextAlignment" Value="Left" />
                 </Style>
             </RichTextBox.Resources>
             <FlowDocument x:Name="FormattedFlowDocument" 
-                          PagePadding="16,12,16,12" 
+                          PagePadding="24,20,24,20" 
                           TextAlignment="Left"
                           FontFamily="Segoe UI" 
                           FontSize="15"

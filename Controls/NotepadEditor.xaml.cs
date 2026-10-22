@@ -101,7 +101,8 @@ namespace NotepadByFerryPot.Controls
             }
         }
 
-        private bool _isFormattedView = false;
+        private bool _isFormattedView = true;
+        private bool _hasInitializedViewMode = false;
         public bool IsFormattedView
         {
             get => _isFormattedView;
@@ -130,8 +131,9 @@ namespace NotepadByFerryPot.Controls
 
         public void SetViewMode(bool formatted)
         {
-            if (_isFormattedView == formatted) return;
+            if (_hasInitializedViewMode && _isFormattedView == formatted) return;
 
+            _hasInitializedViewMode = true;
             _isFormattedView = formatted;
             if (_isFormattedView)
             {
@@ -151,7 +153,7 @@ namespace NotepadByFerryPot.Controls
                         var ff = GetFormattedFontFamily(SettingsService.Current.FontFamilyName);
                         var doc = new FlowDocument(new Paragraph(new Run(MainTextBox.Text)) { Margin = new Thickness(0) })
                         {
-                            PagePadding = new Thickness(16, 12, 16, 12),
+                            PagePadding = new Thickness(24, 20, 24, 20),
                             FontFamily = ff,
                             FontSize = SettingsService.Current.FontSize,
                             TextAlignment = TextAlignment.Left
@@ -248,7 +250,7 @@ namespace NotepadByFerryPot.Controls
                     var ff = GetFormattedFontFamily(SettingsService.Current.FontFamilyName);
                     var doc = new FlowDocument(new Paragraph(new Run(MainTextBox.Text)) { Margin = new Thickness(0) })
                     {
-                        PagePadding = new Thickness(16, 12, 16, 12),
+                        PagePadding = new Thickness(24, 20, 24, 20),
                         FontFamily = ff,
                         FontSize = SettingsService.Current.FontSize,
                         TextAlignment = TextAlignment.Left
