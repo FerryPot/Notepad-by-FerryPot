@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows;
@@ -171,32 +172,24 @@ namespace NotepadByFerryPot.Services
             {
                 if (block is Paragraph p)
                 {
-                    string pText = InlinesToMarkdown(p.Inlines);
+                    int headingLevel = 0;
+                    if (p.Tag is string tag && tag.StartsWith("h") && int.TryParse(tag.Substring(1), out int lvl))
+                    {
+                        headingLevel = lvl;
+                    }
+                    else if (p.FontSize >= 24 && p.FontWeight == FontWeights.Bold) headingLevel = 1;
+                    else if (p.FontSize >= 20 && p.FontWeight == FontWeights.Bold) headingLevel = 2;
+                    else if (p.FontSize >= 17 && (p.FontWeight == FontWeights.Bold || p.FontWeight == FontWeights.SemiBold)) headingLevel = 3;
+                    else if (p.FontSize >= 15.5 && (p.FontWeight == FontWeights.Bold || p.FontWeight == FontWeights.SemiBold)) headingLevel = 4;
+                    else if (p.FontSize >= 14 && (p.FontWeight == FontWeights.Bold || p.FontWeight == FontWeights.SemiBold) && p.Tag != null) headingLevel = 5;
 
-                    if (p.Tag is string tag && tag.StartsWith("h"))
+                    bool isHeading = headingLevel > 0;
+                    string pText = InlinesToMarkdown(p.Inlines, isParentBold: isHeading, isParentItalic: false).Trim();
+
+                    if (isHeading)
                     {
-                        if (int.TryParse(tag.Substring(1), out int lvl))
-                        {
-                            sb.AppendLine(new string('#', lvl) + " " + pText);
-                            sb.AppendLine();
-                            continue;
-                        }
-                    }
-                    else if (p.FontSize >= 24 && p.FontWeight == FontWeights.Bold)
-                    {
-                        sb.AppendLine("# " + pText);
-                        sb.AppendLine();
-                        continue;
-                    }
-                    else if (p.FontSize >= 20 && p.FontWeight == FontWeights.Bold)
-                    {
-                        sb.AppendLine("## " + pText);
-                        sb.AppendLine();
-                        continue;
-                    }
-                    else if (p.FontSize >= 17 && (p.FontWeight == FontWeights.Bold || p.FontWeight == FontWeights.SemiBold))
-                    {
-                        sb.AppendLine("### " + pText);
+                        while (pText.StartsWith("#")) pText = pText.Substring(1).TrimStart();
+                        sb.AppendLine(new string('#', headingLevel) + " " + pText);
                         sb.AppendLine();
                         continue;
                     }
@@ -240,18 +233,35 @@ namespace NotepadByFerryPot.Services
                             }
                         }
 
+                        itemText = itemText.Trim();
                         if (itemText.StartsWith("- [ ]") || itemText.StartsWith("- [x]"))
                         {
                             sb.AppendLine(itemText);
                         }
-                        else if (isNumbered)
-                        {
-                            sb.AppendLine($"{idx}. {itemText}");
-                            idx++;
-                        }
                         else
                         {
-                            sb.AppendLine($"* {itemText}");
+                            if (itemText.StartsWith("- ") || itemText.StartsWith("* ") || itemText.StartsWith("+ "))
+                            {
+                                itemText = itemText.Substring(2).TrimStart();
+                            }
+                            else
+                            {
+                                int dotIdx = itemText.IndexOf(". ");
+                                if (dotIdx > 0 && int.TryParse(itemText.Substring(0, dotIdx), out _))
+                                {
+                                    itemText = itemText.Substring(dotIdx + 2).TrimStart();
+                                }
+                            }
+
+                            if (isNumbered)
+                            {
+                                sb.AppendLine($"{idx}. {itemText}");
+                                idx++;
+                            }
+                            else
+                            {
+                                sb.AppendLine($"- {itemText}");
+                            }
                         }
                     }
                     sb.AppendLine();
@@ -313,89 +323,125 @@ namespace NotepadByFerryPot.Services
             return sb.ToString().TrimEnd() + Environment.NewLine;
         }
 
-        public static string InlinesToMarkdown(InlineCollection inlines)
+        public static string InlinesToMarkdown(InlineCollection inlines, bool isParentBold = false, bool isParentItalic = false)
         {
             var sb = new StringBuilder();
             foreach (var inline in inlines)
             {
-                sb.Append(InlineToMarkdown(inline));
+                sb.Append(InlineToMarkdown(inline, isParentBold, isParentItalic));
             }
             return sb.ToString();
         }
 
-        private static string InlineToMarkdown(Inline inline)
+        private static string InlineToMarkdown(Inline inline, bool isParentBold, bool isParentItalic)
         {
-            if (inline is Bold b)
-            {
-                return $"**{InlinesToMarkdown(b.Inlines)}**";
-            }
-            if (inline is Italic it)
-            {
-                return $"*{InlinesToMarkdown(it.Inlines)}*";
-            }
             if (inline is Hyperlink hl)
             {
-                return $"[{InlinesToMarkdown(hl.Inlines)}]({hl.NavigateUri})";
+                string text = InlinesToMarkdown(hl.Inlines, isParentBold, isParentItalic);
+                return $"[{text}]({hl.NavigateUri})";
             }
+
+            if (inline is Bold b)
+            {
+                string inner = InlinesToMarkdown(b.Inlines, isParentBold: true, isParentItalic: isParentItalic);
+                return isParentBold ? inner : $"**{inner}**";
+            }
+
+            if (inline is Italic it)
+            {
+                string inner = InlinesToMarkdown(it.Inlines, isParentBold: isParentBold, isParentItalic: true);
+                return isParentItalic ? inner : $"*{inner}*";
+            }
+
             if (inline is Span sp)
             {
-                string inner = InlinesToMarkdown(sp.Inlines);
-                if (sp.TextDecorations == TextDecorations.Strikethrough)
+                bool hasStrike = sp.TextDecorations != null && sp.TextDecorations.Any(d => d.Location == TextDecorationLocation.Strikethrough);
+                bool isBold = (sp.FontWeight == FontWeights.Bold || sp.FontWeight == FontWeights.SemiBold || sp.FontWeight == FontWeights.ExtraBold) && !isParentBold;
+                bool isItalic = (sp.FontStyle == FontStyles.Italic) && !isParentItalic;
+
+                string inner = InlinesToMarkdown(sp.Inlines, isParentBold || isBold, isParentItalic || isItalic);
+
+                if (isBold && isItalic)
                 {
-                    return $"~~{inner}~~";
+                    inner = $"***{inner}***";
                 }
-                if (sp.FontWeight == FontWeights.Bold && sp.FontStyle == FontStyles.Italic)
+                else if (isBold)
                 {
-                    return $"***{inner}***";
+                    inner = $"**{inner}**";
                 }
-                if (sp.FontWeight == FontWeights.Bold)
+                else if (isItalic)
                 {
-                    return $"**{inner}**";
+                    inner = $"*{inner}*";
                 }
-                if (sp.FontStyle == FontStyles.Italic)
+
+                if (hasStrike)
                 {
-                    return $"*{inner}*";
+                    inner = $"~~{inner}~~";
                 }
+
                 return inner;
             }
+
             if (inline is Run r)
             {
                 string text = r.Text;
-                if (r.FontWeight == FontWeights.Bold && r.FontStyle == FontStyles.Italic)
-                {
-                    return $"***{text}***";
-                }
-                if (r.FontWeight == FontWeights.Bold)
-                {
-                    return $"**{text}**";
-                }
-                if (r.FontStyle == FontStyles.Italic)
-                {
-                    return $"*{text}*";
-                }
+                if (string.IsNullOrEmpty(text)) return "";
+
                 if (r.FontFamily != null && r.FontFamily.Source == "Consolas")
                 {
                     return $"`{text}`";
                 }
-                return text;
+
+                bool hasStrike = r.TextDecorations != null && r.TextDecorations.Any(d => d.Location == TextDecorationLocation.Strikethrough);
+                bool isBold = (r.FontWeight == FontWeights.Bold || r.FontWeight == FontWeights.SemiBold || r.FontWeight == FontWeights.ExtraBold) && !isParentBold;
+                bool isItalic = (r.FontStyle == FontStyles.Italic) && !isParentItalic;
+
+                string result = text;
+                if (isBold && isItalic)
+                {
+                    result = $"***{result}***";
+                }
+                else if (isBold)
+                {
+                    result = $"**{result}**";
+                }
+                else if (isItalic)
+                {
+                    result = $"*{result}*";
+                }
+
+                if (hasStrike)
+                {
+                    result = $"~~{result}~~";
+                }
+
+                return result;
             }
+
             if (inline is LineBreak)
             {
                 return "\n";
             }
+
             return "";
         }
 
         public static void AddFormattedInlines(Paragraph paragraph, string text, Brush foreground)
         {
             if (string.IsNullOrEmpty(text)) return;
+            AddFormattedInlinesInternal(paragraph.Inlines, text, foreground);
+        }
 
-            string pattern = @"(?<bolditalic>\*\*\*(.+?)\*\*\*)|" +
-                             @"(?<bold>\*\*(.+?)\*\*|__(.+?)__)|" +
-                             @"(?<strike>~~(.+?)~~)|" +
-                             @"(?<italic>\*(.+?)\*|_(.+?)_)|" +
-                             @"(?<code>`([^`]+)`)|" +
-                             @"(?<link>\[(?<text>[^\]]+)\]\((?<url>[^)]+)\))";
+        private static void AddFormattedInlinesInternal(InlineCollection inlines, string text, Brush foreground)
+        {
+            if (string.IsNullOrEmpty(text)) return;
+
+            string pattern = @"(?<code>`(?<codeText>[^`]+)`)|" +
+                             @"(?<link>\[(?<linkText>[^\]]+)\]\((?<url>[^)]+)\))|" +
+                             @"(?<bolditalic>(?:\*\*\*|___|\*\*_|__\*)(?<biContent>.+?)(?:\*\*\*|___|_\*\*|\*__))|" +
+                             @"(?<bold>(?:\*\*|__)(?<bContent>.+?)(?:\*\*|__))|" +
+                             @"(?<strike>~~(?<sContent>.+?)~~)|" +
+                             @"(?<italic>(?:\*(?<iContent>[^*\n]+?)\*|(?<!\w)_(?<iContent>[^_\n]+?)_(?!\w)))";
 
             int lastIndex = 0;
             var matches = Regex.Matches(text, pattern);
@@ -404,55 +450,26 @@ namespace NotepadByFerryPot.Services
             {
                 if (match.Index > lastIndex)
                 {
-                    paragraph.Inlines.Add(new Run(text.Substring(lastIndex, match.Index - lastIndex)));
+                    inlines.Add(new Run(text.Substring(lastIndex, match.Index - lastIndex)));
                 }
 
-                if (match.Groups["bolditalic"].Success)
+                if (match.Groups["code"].Success)
                 {
-                    string raw = match.Groups["bolditalic"].Value;
-                    string content = raw.Substring(3, raw.Length - 6);
-                    var span = new Span(new Run(content)) { FontWeight = FontWeights.Bold, FontStyle = FontStyles.Italic };
-                    paragraph.Inlines.Add(span);
-                }
-                else if (match.Groups["bold"].Success)
-                {
-                    string raw = match.Groups["bold"].Value;
-                    string content = raw.Substring(2, raw.Length - 4);
-                    var bold = new Bold(new Run(content));
-                    paragraph.Inlines.Add(bold);
-                }
-                else if (match.Groups["strike"].Success)
-                {
-                    string raw = match.Groups["strike"].Value;
-                    string content = raw.Substring(2, raw.Length - 4);
-                    var strike = new Span(new Run(content)) { TextDecorations = TextDecorations.Strikethrough };
-                    paragraph.Inlines.Add(strike);
-                }
-                else if (match.Groups["italic"].Success)
-                {
-                    string raw = match.Groups["italic"].Value;
-                    string content = raw.Substring(1, raw.Length - 2);
-                    var italic = new Italic(new Run(content));
-                    paragraph.Inlines.Add(italic);
-                }
-                else if (match.Groups["code"].Success)
-                {
-                    string raw = match.Groups["code"].Value;
-                    string content = raw.Substring(1, raw.Length - 2);
-                    var codeRun = new Run(content)
+                    string codeContent = match.Groups["codeText"].Value;
+                    var codeRun = new Run(codeContent)
                     {
                         FontFamily = new FontFamily("Consolas"),
                         Background = new SolidColorBrush(Color.FromArgb(40, 128, 128, 128))
                     };
-                    paragraph.Inlines.Add(codeRun);
+                    inlines.Add(codeRun);
                 }
                 else if (match.Groups["link"].Success)
                 {
-                    string linkText = match.Groups["text"].Value;
+                    string linkText = match.Groups["linkText"].Value;
                     string url = match.Groups["url"].Value;
                     try
                     {
-                        var hyperlink = new Hyperlink(new Run(linkText))
+                        var hyperlink = new Hyperlink
                         {
                             NavigateUri = new Uri(url.StartsWith("http") ? url : "https://" + url),
                             ToolTip = url
@@ -475,12 +492,41 @@ namespace NotepadByFerryPot.Services
                             }
                             catch { }
                         };
-                        paragraph.Inlines.Add(hyperlink);
+                        AddFormattedInlinesInternal(hyperlink.Inlines, linkText, foreground);
+                        inlines.Add(hyperlink);
                     }
                     catch
                     {
-                        paragraph.Inlines.Add(new Run(linkText));
+                        AddFormattedInlinesInternal(inlines, linkText, foreground);
                     }
+                }
+                else if (match.Groups["bolditalic"].Success)
+                {
+                    string content = match.Groups["biContent"].Value;
+                    var span = new Span { FontWeight = FontWeights.Bold, FontStyle = FontStyles.Italic };
+                    AddFormattedInlinesInternal(span.Inlines, content, foreground);
+                    inlines.Add(span);
+                }
+                else if (match.Groups["bold"].Success)
+                {
+                    string content = match.Groups["bContent"].Value;
+                    var bold = new Bold();
+                    AddFormattedInlinesInternal(bold.Inlines, content, foreground);
+                    inlines.Add(bold);
+                }
+                else if (match.Groups["strike"].Success)
+                {
+                    string content = match.Groups["sContent"].Value;
+                    var strike = new Span { TextDecorations = TextDecorations.Strikethrough };
+                    AddFormattedInlinesInternal(strike.Inlines, content, foreground);
+                    inlines.Add(strike);
+                }
+                else if (match.Groups["italic"].Success)
+                {
+                    string content = match.Groups["iContent"].Value;
+                    var italic = new Italic();
+                    AddFormattedInlinesInternal(italic.Inlines, content, foreground);
+                    inlines.Add(italic);
                 }
 
                 lastIndex = match.Index + match.Length;
@@ -488,11 +534,11 @@ namespace NotepadByFerryPot.Services
 
             if (lastIndex < text.Length)
             {
-                paragraph.Inlines.Add(new Run(text.Substring(lastIndex)));
+                inlines.Add(new Run(text.Substring(lastIndex)));
             }
         }
 
-        private static Block CreateTable(List<string> tableLines, double baseFontSize, Brush foreground)
+        public static Block CreateTable(List<string> tableLines, double baseFontSize, Brush foreground)
         {
             var table = new Table
             {

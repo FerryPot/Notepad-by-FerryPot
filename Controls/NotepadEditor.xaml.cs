@@ -532,10 +532,45 @@ namespace NotepadByFerryPot.Controls
 
         #region Markdown Formatting Helpers
 
+        private void EnsureWordSelectionIfEmpty()
+        {
+            if (FormattedRichTextBox.Selection.IsEmpty)
+            {
+                var caret = FormattedRichTextBox.CaretPosition;
+                if (caret == null) return;
+
+                TextPointer start = caret;
+                while (start != null && start.GetPointerContext(LogicalDirection.Backward) == TextPointerContext.Text)
+                {
+                    string prev = start.GetTextInRun(LogicalDirection.Backward);
+                    if (string.IsNullOrEmpty(prev) || char.IsWhiteSpace(prev[^1])) break;
+                    var prevPtr = start.GetPositionAtOffset(-1, LogicalDirection.Backward);
+                    if (prevPtr == null) break;
+                    start = prevPtr;
+                }
+
+                TextPointer end = caret;
+                while (end != null && end.GetPointerContext(LogicalDirection.Forward) == TextPointerContext.Text)
+                {
+                    string next = end.GetTextInRun(LogicalDirection.Forward);
+                    if (string.IsNullOrEmpty(next) || char.IsWhiteSpace(next[0])) break;
+                    var nextPtr = end.GetPositionAtOffset(1, LogicalDirection.Forward);
+                    if (nextPtr == null) break;
+                    end = nextPtr;
+                }
+
+                if (start != null && end != null && start.CompareTo(end) < 0)
+                {
+                    FormattedRichTextBox.Selection.Select(start, end);
+                }
+            }
+        }
+
         public void ToggleWrap(string prefix, string suffix)
         {
             if (_isFormattedView)
             {
+                EnsureWordSelectionIfEmpty();
                 if (prefix == "**")
                 {
                     EditingCommands.ToggleBold.Execute(null, FormattedRichTextBox);
@@ -544,14 +579,35 @@ namespace NotepadByFerryPot.Controls
                 {
                     EditingCommands.ToggleItalic.Execute(null, FormattedRichTextBox);
                 }
+                else if (prefix == "***")
+                {
+                    EditingCommands.ToggleBold.Execute(null, FormattedRichTextBox);
+                    EditingCommands.ToggleItalic.Execute(null, FormattedRichTextBox);
+                }
                 else if (prefix == "~~")
                 {
-                    var range = new TextRange(FormattedRichTextBox.Selection.Start, FormattedRichTextBox.Selection.End);
+                    var range = FormattedRichTextBox.Selection;
                     var decs = range.GetPropertyValue(Inline.TextDecorationsProperty) as TextDecorationCollection;
-                    if (decs != null && decs.Count > 0)
+                    bool hasStrike = decs != null && decs.Count > 0;
+                    if (hasStrike)
                         range.ApplyPropertyValue(Inline.TextDecorationsProperty, null);
                     else
                         range.ApplyPropertyValue(Inline.TextDecorationsProperty, TextDecorations.Strikethrough);
+                }
+                else if (prefix == "`")
+                {
+                    var range = FormattedRichTextBox.Selection;
+                    var font = range.GetPropertyValue(TextElement.FontFamilyProperty) as FontFamily;
+                    if (font != null && font.Source == "Consolas")
+                    {
+                        range.ApplyPropertyValue(TextElement.FontFamilyProperty, new FontFamily(SettingsService.Current.FontFamilyName));
+                        range.ApplyPropertyValue(TextElement.BackgroundProperty, Brushes.Transparent);
+                    }
+                    else
+                    {
+                        range.ApplyPropertyValue(TextElement.FontFamilyProperty, new FontFamily("Consolas"));
+                        range.ApplyPropertyValue(TextElement.BackgroundProperty, new SolidColorBrush(Color.FromArgb(40, 128, 128, 128)));
+                    }
                 }
                 FormattedRichTextBox.Focus();
                 return;
@@ -660,11 +716,19 @@ namespace NotepadByFerryPot.Controls
                     while (level < prefix.Length && prefix[level] == '#') level++;
                     double baseFontSize = SettingsService.Current.FontSize;
 
+                    // If paragraph already has this heading level, toggle back to normal paragraph
+                    if (p.Tag is string currentTag && currentTag == "h" + level)
+                    {
+                        level = 0;
+                    }
+
                     if (level == 0)
                     {
                         p.FontSize = baseFontSize;
                         p.FontWeight = FontWeights.Normal;
                         p.Tag = null;
+                        p.Margin = new Thickness(0, 0, 0, baseFontSize * 0.6);
+                        p.BorderThickness = new Thickness(0);
                     }
                     else
                     {
@@ -681,6 +745,22 @@ namespace NotepadByFerryPot.Controls
                         p.FontSize = size;
                         p.FontWeight = level <= 2 ? FontWeights.Bold : FontWeights.SemiBold;
                         p.Tag = "h" + level;
+                        p.Margin = new Thickness(0, baseFontSize * (level == 1 ? 1.2 : 0.8), 0, baseFontSize * 0.4);
+
+                        if (level == 1)
+                        {
+                            try
+                            {
+                                p.BorderBrush = (Brush)Application.Current.FindResource("MaterialDesignDivider");
+                                p.BorderThickness = new Thickness(0, 0, 0, 1);
+                                p.Padding = new Thickness(0, 0, 0, 6);
+                            }
+                            catch { }
+                        }
+                        else
+                        {
+                            p.BorderThickness = new Thickness(0);
+                        }
                     }
                 }
                 FormattedRichTextBox.Focus();
@@ -799,6 +879,28 @@ namespace NotepadByFerryPot.Controls
 
         public void InsertLink()
         {
+            if (_isFormattedView)
+            {
+                string text = FormattedRichTextBox.Selection.Text;
+                if (string.IsNullOrEmpty(text)) text = "link";
+
+                var hl = new Hyperlink(new Run(text))
+                {
+                    NavigateUri = new Uri("https://"),
+                    ToolTip = "https://"
+                };
+                try { hl.Foreground = (Brush)Application.Current.FindResource("MaterialDesign.Brush.Primary"); } catch { }
+
+                var p = FormattedRichTextBox.CaretPosition.Paragraph;
+                if (p != null)
+                {
+                    FormattedRichTextBox.Selection.Text = "";
+                    p.Inlines.Add(hl);
+                }
+                FormattedRichTextBox.Focus();
+                return;
+            }
+
             int selStart = MainTextBox.SelectionStart;
             int selLen = MainTextBox.SelectionLength;
 
@@ -820,6 +922,31 @@ namespace NotepadByFerryPot.Controls
 
         public void InsertTable(int rows = 3, int cols = 3)
         {
+            if (_isFormattedView)
+            {
+                var tableLines = new List<string>();
+                var headerCells = new List<string>();
+                for (int c = 1; c <= cols; c++) headerCells.Add($"Column {c}");
+                tableLines.Add("| " + string.Join(" | ", headerCells) + " |");
+
+                var sepCells = new List<string>();
+                for (int c = 1; c <= cols; c++) sepCells.Add("---");
+                tableLines.Add("| " + string.Join(" | ", sepCells) + " |");
+
+                for (int r = 1; r <= rows; r++)
+                {
+                    var rowCells = new List<string>();
+                    for (int c = 1; c <= cols; c++) rowCells.Add($"Item {r}.{c}");
+                    tableLines.Add("| " + string.Join(" | ", rowCells) + " |");
+                }
+
+                var brush = (Brush)Application.Current.FindResource("MaterialDesignBody");
+                var tableBlock = MarkdownParserService.CreateTable(tableLines, SettingsService.Current.FontSize, brush);
+                FormattedRichTextBox.Document.Blocks.Add(tableBlock);
+                FormattedRichTextBox.Focus();
+                return;
+            }
+
             int selStart = MainTextBox.SelectionStart;
             var sb = new StringBuilder();
 
@@ -869,6 +996,14 @@ namespace NotepadByFerryPot.Controls
             {
                 var range = new TextRange(FormattedRichTextBox.Selection.Start, FormattedRichTextBox.Selection.End);
                 range.ClearAllProperties();
+                var p = FormattedRichTextBox.CaretPosition.Paragraph;
+                if (p != null)
+                {
+                    p.Tag = null;
+                    p.FontSize = SettingsService.Current.FontSize;
+                    p.FontWeight = FontWeights.Normal;
+                    p.BorderThickness = new Thickness(0);
+                }
                 FormattedRichTextBox.Focus();
                 return;
             }
