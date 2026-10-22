@@ -58,7 +58,7 @@ namespace NotepadByFerryPot.Services
                 }
 
                 // 2. Horizontal Rule (---, ***, ___)
-                if (Regex.IsMatch(trimmed, @"^(---|___|\*\*\*)\s*$"))
+                if (Regex.IsMatch(trimmed, @"^(---|___|\*\*\*)\s*$", RegexOptions.None, TimeSpan.FromSeconds(1)))
                 {
                     doc.Blocks.Add(CreateHorizontalRule());
                     i++;
@@ -445,88 +445,102 @@ namespace NotepadByFerryPot.Services
                              @"(?<italic>(?:\*(?<iContent>[^*\n]+?)\*|(?<!\w)_(?<iContent>[^_\n]+?)_(?!\w)))";
 
             int lastIndex = 0;
-            var matches = Regex.Matches(text, pattern);
-
-            foreach (Match match in matches)
+            try
             {
-                if (match.Index > lastIndex)
-                {
-                    inlines.Add(new Run(text.Substring(lastIndex, match.Index - lastIndex)));
-                }
+                var matches = Regex.Matches(text, pattern, RegexOptions.None, TimeSpan.FromSeconds(1));
 
-                if (match.Groups["code"].Success)
+                foreach (Match match in matches)
                 {
-                    string codeContent = match.Groups["codeText"].Value;
-                    var codeRun = new Run(codeContent)
+                    if (match.Index > lastIndex)
                     {
-                        FontFamily = new FontFamily("Consolas"),
-                        Background = new SolidColorBrush(Color.FromArgb(40, 128, 128, 128))
-                    };
-                    inlines.Add(codeRun);
-                }
-                else if (match.Groups["link"].Success)
-                {
-                    string linkText = match.Groups["linkText"].Value;
-                    string url = match.Groups["url"].Value;
-                    try
+                        inlines.Add(new Run(text.Substring(lastIndex, match.Index - lastIndex)));
+                    }
+
+                    if (match.Groups["code"].Success)
                     {
-                        var hyperlink = new Hyperlink();
-                        if (Uri.TryCreate(url, UriKind.RelativeOrAbsolute, out var navUri))
+                        string codeContent = match.Groups["codeText"].Value;
+                        var codeRun = new Run(codeContent)
                         {
-                            hyperlink.NavigateUri = navUri;
-                        }
-
-                        SafeLinkService.ConfigureHyperlink(hyperlink, url);
-
+                            FontFamily = new FontFamily("Consolas"),
+                            Background = new SolidColorBrush(Color.FromArgb(40, 128, 128, 128))
+                        };
+                        inlines.Add(codeRun);
+                    }
+                    else if (match.Groups["link"].Success)
+                    {
+                        string linkText = match.Groups["linkText"].Value;
+                        string url = match.Groups["url"].Value;
                         try
                         {
-                            hyperlink.Foreground = (Brush)Application.Current.FindResource("MaterialDesign.Brush.Primary");
+                            var hyperlink = new Hyperlink();
+                            if (Uri.TryCreate(url, UriKind.RelativeOrAbsolute, out var navUri))
+                            {
+                                hyperlink.NavigateUri = navUri;
+                            }
+
+                            SafeLinkService.ConfigureHyperlink(hyperlink, url);
+
+                            try
+                            {
+                                hyperlink.Foreground = (Brush)Application.Current.FindResource("MaterialDesign.Brush.Primary");
+                            }
+                            catch { }
+
+                            AddFormattedInlinesInternal(hyperlink.Inlines, linkText, foreground);
+                            inlines.Add(hyperlink);
                         }
-                        catch { }
-
-                        AddFormattedInlinesInternal(hyperlink.Inlines, linkText, foreground);
-                        inlines.Add(hyperlink);
+                        catch
+                        {
+                            AddFormattedInlinesInternal(inlines, linkText, foreground);
+                        }
                     }
-                    catch
+                    else if (match.Groups["bolditalic"].Success)
                     {
-                        AddFormattedInlinesInternal(inlines, linkText, foreground);
+                        string content = match.Groups["biContent"].Value;
+                        var span = new Span { FontWeight = FontWeights.Bold, FontStyle = FontStyles.Italic };
+                        AddFormattedInlinesInternal(span.Inlines, content, foreground);
+                        inlines.Add(span);
                     }
-                }
-                else if (match.Groups["bolditalic"].Success)
-                {
-                    string content = match.Groups["biContent"].Value;
-                    var span = new Span { FontWeight = FontWeights.Bold, FontStyle = FontStyles.Italic };
-                    AddFormattedInlinesInternal(span.Inlines, content, foreground);
-                    inlines.Add(span);
-                }
-                else if (match.Groups["bold"].Success)
-                {
-                    string content = match.Groups["bContent"].Value;
-                    var bold = new Bold();
-                    AddFormattedInlinesInternal(bold.Inlines, content, foreground);
-                    inlines.Add(bold);
-                }
-                else if (match.Groups["strike"].Success)
-                {
-                    string content = match.Groups["sContent"].Value;
-                    var strike = new Span { TextDecorations = TextDecorations.Strikethrough };
-                    AddFormattedInlinesInternal(strike.Inlines, content, foreground);
-                    inlines.Add(strike);
-                }
-                else if (match.Groups["italic"].Success)
-                {
-                    string content = match.Groups["iContent"].Value;
-                    var italic = new Italic();
-                    AddFormattedInlinesInternal(italic.Inlines, content, foreground);
-                    inlines.Add(italic);
+                    else if (match.Groups["bold"].Success)
+                    {
+                        string content = match.Groups["bContent"].Value;
+                        var bold = new Bold();
+                        AddFormattedInlinesInternal(bold.Inlines, content, foreground);
+                        inlines.Add(bold);
+                    }
+                    else if (match.Groups["strike"].Success)
+                    {
+                        string content = match.Groups["sContent"].Value;
+                        var strike = new Span { TextDecorations = TextDecorations.Strikethrough };
+                        AddFormattedInlinesInternal(strike.Inlines, content, foreground);
+                        inlines.Add(strike);
+                    }
+                    else if (match.Groups["italic"].Success)
+                    {
+                        string content = match.Groups["iContent"].Value;
+                        var italic = new Italic();
+                        AddFormattedInlinesInternal(italic.Inlines, content, foreground);
+                        inlines.Add(italic);
+                    }
+
+                    lastIndex = match.Index + match.Length;
                 }
 
-                lastIndex = match.Index + match.Length;
+                if (lastIndex < text.Length)
+                {
+                    inlines.Add(new Run(text.Substring(lastIndex)));
+                }
             }
-
-            if (lastIndex < text.Length)
+            catch (RegexMatchTimeoutException)
             {
-                inlines.Add(new Run(text.Substring(lastIndex)));
+                // Fall back to plain text for that block on timeout, not crash
+                inlines.Clear();
+                inlines.Add(new Run(text));
+            }
+            catch
+            {
+                inlines.Clear();
+                inlines.Add(new Run(text));
             }
         }
 

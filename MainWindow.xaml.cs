@@ -439,6 +439,13 @@ namespace NotepadByFerryPot
             LineEndingStatusText.Text = _activeDocument.LineEnding;
             EncodingStatusText.Text = _activeDocument.EncodingName;
             ZoomStatusText.Text = $"{(int)SettingsService.Current.ZoomLevel}%";
+
+            if (ReadOnlyStatusText != null && ReadOnlySeparator != null)
+            {
+                var vis = _activeDocument.IsReadOnly ? Visibility.Visible : Visibility.Collapsed;
+                ReadOnlyStatusText.Visibility = vis;
+                ReadOnlySeparator.Visibility = vis;
+            }
         }
 
         #endregion
@@ -469,32 +476,120 @@ namespace NotepadByFerryPot
 
         private void OpenFile(string filePath)
         {
+            if (!File.Exists(filePath))
+            {
+                MessageBox.Show($"The file \"{filePath}\" does not exist or has been moved.", "File Not Found", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             try
             {
-                // Detect BOM / Encoding
-                Encoding encoding = Encoding.UTF8;
-                string content = File.ReadAllText(filePath, encoding);
+                var fileInfo = new FileInfo(filePath);
+                long sizeBytes = fileInfo.Length;
+                double sizeMB = sizeBytes / (1024.0 * 1024.0);
 
-                // If current tab is empty and untitled, reuse it
+                // 1. File size check: warn if > 50 MB
+                if (sizeMB > 50.0)
+                {
+                    var result = MessageBox.Show(
+                        $"\"{fileInfo.Name}\" is {sizeMB:F1} MB.\n\nOpening very large files may take significant time or memory.\n\nDo you want to continue opening this file?",
+                        "Large File Warning",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Warning);
+
+                    if (result != MessageBoxResult.Yes)
+                    {
+                        return;
+                    }
+                }
+
+                // 2. Binary file detection: check first 8 KB for null characters
+                int checkLength = (int)Math.Min(8192, sizeBytes);
+                if (checkLength > 0)
+                {
+                    byte[] buffer = new byte[checkLength];
+                    using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                    {
+                        int read = fs.Read(buffer, 0, buffer.Length);
+                        for (int i = 0; i < read; i++)
+                        {
+                            if (buffer[i] == 0)
+                            {
+                                var result = MessageBox.Show(
+                                    $"\"{fileInfo.Name}\" appears to be a binary file (contains null characters).\n\nOpening binary files in a text editor may display garbled characters or cause slowdowns.\n\nDo you want to open it anyway?",
+                                    "Binary File Detected",
+                                    MessageBoxButton.YesNo,
+                                    MessageBoxImage.Warning);
+
+                                if (result != MessageBoxResult.Yes)
+                                {
+                                    return;
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // 3. Read file with BOM and encoding detection (UTF-8, UTF-16 LE/BE, ANSI fallback)
+                var (content, encoding) = FileEncodingService.ReadFileWithEncoding(filePath);
+
+                // 4. Detect Line Ending
+                string lineEnding = content.Contains("\r\n") ? "Windows (CRLF)" : (content.Contains("\n") ? "Unix (LF)" : "Windows (CRLF)");
+
+                // 5. Detect Read-Only status
+                bool isReadOnly = (fileInfo.Attributes & FileAttributes.ReadOnly) != 0;
+
+                // 6. Reuse current tab if empty & untitled, or create new tab
+                NotepadDocument targetDoc;
                 if (_activeDocument != null &&
                     _activeDocument.FilePath == null &&
                     !_activeDocument.IsModified &&
                     string.IsNullOrEmpty(_activeDocument.Content))
                 {
-                    _activeDocument.Content = content;
-                    _activeDocument.MarkAsSaved(filePath);
-                    UpdateTitle();
-                    RebuildTabsUI();
+                    targetDoc = _activeDocument;
+                    targetDoc.Content = content;
+                    targetDoc.Encoding = encoding;
+                    targetDoc.LineEnding = lineEnding;
+                    targetDoc.IsReadOnly = isReadOnly;
+                    targetDoc.MarkAsSaved(filePath);
                 }
                 else
                 {
-                    var doc = CreateNewTab(Path.GetFileName(filePath), content, filePath);
-                    doc.MarkAsSaved(filePath);
+                    targetDoc = CreateNewTab(Path.GetFileName(filePath), content, filePath);
+                    targetDoc.Encoding = encoding;
+                    targetDoc.LineEnding = lineEnding;
+                    targetDoc.IsReadOnly = isReadOnly;
+                    targetDoc.MarkAsSaved(filePath);
                 }
+
+                UpdateTitle();
+                UpdateStatusBar();
+                RebuildTabsUI();
+            }
+            catch (UnauthorizedAccessException uex)
+            {
+                MessageBox.Show(
+                    $"Access denied to \"{Path.GetFileName(filePath)}\".\n\nYou do not have permission to open this file:\n{uex.Message}",
+                    "Permission Denied",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            catch (IOException ioEx)
+            {
+                MessageBox.Show(
+                    $"Could not open \"{Path.GetFileName(filePath)}\".\n\nThe file is currently in use or locked by another process:\n{ioEx.Message}",
+                    "File In Use",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Could not open file:\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show(
+                    $"Could not open file \"{Path.GetFileName(filePath)}\":\n\n{ex.Message}",
+                    "Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
             }
         }
 

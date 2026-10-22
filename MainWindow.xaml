@@ -465,6 +465,16 @@
                                Margin="0,0,12,0"
                                Opacity="0.8"/>
                     <Separator Margin="0,0,12,0"/>
+                    <!-- Read-Only Indicator -->
+                    <TextBlock x:Name="ReadOnlyStatusText"
+                               Text="Read-Only"
+                               FontWeight="SemiBold"
+                               FontSize="11"
+                               Foreground="{DynamicResource MaterialDesign.Brush.Primary}"
+                               Visibility="Collapsed"
+                               Margin="0,0,12,0"
+                               VerticalAlignment="Center"/>
+                    <Separator x:Name="ReadOnlySeparator" Margin="0,0,12,0" Visibility="Collapsed"/>
                     <!-- Status Bar View Mode Button -->
                     <Button x:Name="StatusBarViewModeButton"
                             Style="{StaticResource MaterialDesignFlatButton}" 

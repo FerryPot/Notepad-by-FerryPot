@@ -80,7 +80,7 @@ namespace NotepadByFerryPot.Views
 
             try
             {
-                return new Regex(pattern, options);
+                return new Regex(pattern, options, TimeSpan.FromSeconds(1));
             }
             catch (ArgumentException ex)
             {
@@ -106,14 +106,22 @@ namespace NotepadByFerryPot.Views
                 return false;
             }
 
-            var editor = GetActiveEditor();
-            if (editor != null && editor.IsFormattedView)
+            try
             {
-                return FindNextFormatted(editor, regex, searchUp, query);
+                var editor = GetActiveEditor();
+                if (editor != null && editor.IsFormattedView)
+                {
+                    return FindNextFormatted(editor, regex, searchUp, query);
+                }
+                else
+                {
+                    return FindNextSyntax(regex, searchUp, query);
+                }
             }
-            else
+            catch (RegexMatchTimeoutException)
             {
-                return FindNextSyntax(regex, searchUp, query);
+                StatusTextBlock.Text = "This pattern is too complex (search timed out).";
+                return false;
             }
         }
 
@@ -238,13 +246,20 @@ namespace NotepadByFerryPot.Views
             string replacement = ReplaceTextBox.Text;
             var editor = GetActiveEditor();
 
-            if (editor != null && editor.IsFormattedView)
+            try
             {
-                ReplaceFormatted(editor, regex, replacement);
+                if (editor != null && editor.IsFormattedView)
+                {
+                    ReplaceFormatted(editor, regex, replacement);
+                }
+                else
+                {
+                    ReplaceSyntax(regex, replacement);
+                }
             }
-            else
+            catch (RegexMatchTimeoutException)
             {
-                ReplaceSyntax(regex, replacement);
+                StatusTextBlock.Text = "This pattern is too complex (operation timed out).";
             }
         }
 
@@ -300,13 +315,20 @@ namespace NotepadByFerryPot.Views
             string replacement = ReplaceTextBox.Text;
             var editor = GetActiveEditor();
 
-            if (editor != null && editor.IsFormattedView)
+            try
             {
-                ReplaceAllFormatted(editor, regex, replacement);
+                if (editor != null && editor.IsFormattedView)
+                {
+                    ReplaceAllFormatted(editor, regex, replacement);
+                }
+                else
+                {
+                    ReplaceAllSyntax(regex, replacement);
+                }
             }
-            else
+            catch (RegexMatchTimeoutException)
             {
-                ReplaceAllSyntax(regex, replacement);
+                StatusTextBlock.Text = "This pattern is too complex (operation timed out).";
             }
         }
 

@@ -35,7 +35,28 @@ namespace NotepadByFerryPot.Models
             }
         }
 
-        public string DisplayTitle => IsModified ? $"● {Title}" : Title;
+        public string DisplayTitle
+        {
+            get
+            {
+                string prefix = IsModified ? "● " : "";
+                string suffix = IsReadOnly ? " [Read-Only]" : "";
+                return $"{prefix}{Title}{suffix}";
+            }
+        }
+
+        private bool _isReadOnly = false;
+        public bool IsReadOnly
+        {
+            get => _isReadOnly;
+            set
+            {
+                if (SetProperty(ref _isReadOnly, value))
+                {
+                    OnPropertyChanged(nameof(DisplayTitle));
+                }
+            }
+        }
 
         public string? FilePath
         {
@@ -132,7 +153,10 @@ namespace NotepadByFerryPot.Models
         {
             get
             {
-                if (_encoding == Encoding.UTF8) return "UTF-8";
+                if (_encoding is UTF8Encoding utf8)
+                {
+                    return utf8.GetPreamble().Length > 0 ? "UTF-8 (BOM)" : "UTF-8";
+                }
                 if (_encoding == Encoding.Unicode) return "UTF-16 LE";
                 if (_encoding == Encoding.BigEndianUnicode) return "UTF-16 BE";
                 if (_encoding == Encoding.ASCII) return "ASCII";
@@ -146,6 +170,14 @@ namespace NotepadByFerryPot.Models
             Title = Path.GetFileName(filePath);
             SavedContent = Content;
             IsModified = false;
+            try
+            {
+                if (File.Exists(filePath))
+                {
+                    IsReadOnly = (File.GetAttributes(filePath) & FileAttributes.ReadOnly) != 0;
+                }
+            }
+            catch { }
         }
 
         public void UpdateStatistics()
