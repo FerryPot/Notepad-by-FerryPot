@@ -13,6 +13,57 @@ namespace NotepadByFerryPot.Services
 {
     public static class MarkdownParserService
     {
+        private static readonly Regex HexColorRegex = new Regex(@"^#([0-9a-fA-F]{6})$", RegexOptions.Compiled, TimeSpan.FromSeconds(1));
+
+        public static bool IsValidHexColor(string? hex)
+        {
+            if (string.IsNullOrWhiteSpace(hex)) return false;
+            try
+            {
+                return HexColorRegex.IsMatch(hex.Trim());
+            }
+            catch (RegexMatchTimeoutException)
+            {
+                return false;
+            }
+        }
+
+        public static SolidColorBrush CreateHighlightBrush(string hex)
+        {
+            if (!IsValidHexColor(hex))
+            {
+                hex = "#FFF176";
+            }
+
+            hex = hex.Trim();
+            byte r = Convert.ToByte(hex.Substring(1, 2), 16);
+            byte g = Convert.ToByte(hex.Substring(3, 2), 16);
+            byte b = Convert.ToByte(hex.Substring(5, 2), 16);
+
+            // Alpha 105 (~41%) ensures great readability in Light, Dark, and AMOLED themes
+            var brush = new SolidColorBrush(Color.FromArgb(105, r, g, b));
+            brush.Freeze();
+            return brush;
+        }
+
+        public static string GetHexFromHighlight(Inline inline)
+        {
+            if (inline.Tag is string tag && tag.StartsWith("mark:#", StringComparison.OrdinalIgnoreCase))
+            {
+                string color = tag.Substring(5).Trim();
+                if (IsValidHexColor(color))
+                {
+                    return color.ToUpperInvariant();
+                }
+            }
+
+            if (inline.Background is SolidColorBrush scb && scb.Color.A > 0 && scb != Brushes.Transparent)
+            {
+                return $"#{scb.Color.R:X2}{scb.Color.G:X2}{scb.Color.B:X2}";
+            }
+
+            return "#FFF176";
+        }
         public static FlowDocument ParseToFlowDocument(string markdown, FontFamily fontFamily, double baseFontSize, Brush foreground)
         {
             var doc = new FlowDocument
@@ -390,7 +441,7 @@ namespace NotepadByFerryPot.Services
                 bool hasUnderline = sp.TextDecorations != null && sp.TextDecorations.Any(d => d.Location == TextDecorationLocation.Underline);
                 bool isSup = sp.BaselineAlignment == BaselineAlignment.Superscript || (sp.Tag as string == "sup");
                 bool isSub = sp.BaselineAlignment == BaselineAlignment.Subscript || (sp.Tag as string == "sub");
-                bool isMark = sp.Tag as string == "mark" || (sp.Background is SolidColorBrush mBrush && mBrush.Color.A > 0 && mBrush != Brushes.Transparent);
+                bool isMark = (sp.Tag is string t && t.StartsWith("mark", StringComparison.OrdinalIgnoreCase)) || (sp.Background is SolidColorBrush mBrush && mBrush.Color.A > 0 && mBrush != Brushes.Transparent);
 
                 bool isBold = (sp.FontWeight == FontWeights.Bold || sp.FontWeight == FontWeights.SemiBold || sp.FontWeight == FontWeights.ExtraBold) && !isParentBold;
                 bool isItalic = (sp.FontStyle == FontStyles.Italic) && !isParentItalic;
@@ -432,7 +483,8 @@ namespace NotepadByFerryPot.Services
 
                 if (isMark)
                 {
-                    inner = $"<mark>{inner}</mark>";
+                    string hex = GetHexFromHighlight(sp);
+                    inner = $"<mark style=\"background:{hex}\">{inner}</mark>";
                 }
 
                 return inner;
@@ -452,7 +504,7 @@ namespace NotepadByFerryPot.Services
                 bool hasUnderline = r.TextDecorations != null && r.TextDecorations.Any(d => d.Location == TextDecorationLocation.Underline);
                 bool isSup = r.BaselineAlignment == BaselineAlignment.Superscript || (r.Tag as string == "sup");
                 bool isSub = r.BaselineAlignment == BaselineAlignment.Subscript || (r.Tag as string == "sub");
-                bool isMark = r.Tag as string == "mark";
+                bool isMark = (r.Tag is string rt && rt.StartsWith("mark", StringComparison.OrdinalIgnoreCase)) || (r.Background is SolidColorBrush rBrush && rBrush.Color.A > 0 && rBrush != Brushes.Transparent);
 
                 bool isBold = (r.FontWeight == FontWeights.Bold || r.FontWeight == FontWeights.SemiBold || r.FontWeight == FontWeights.ExtraBold) && !isParentBold;
                 bool isItalic = (r.FontStyle == FontStyles.Italic) && !isParentItalic;
@@ -493,7 +545,8 @@ namespace NotepadByFerryPot.Services
 
                 if (isMark)
                 {
-                    result = $"<mark>{result}</mark>";
+                    string hex = GetHexFromHighlight(r);
+                    result = $"<mark style=\"background:{hex}\">{result}</mark>";
                 }
 
                 return result;
@@ -526,7 +579,7 @@ namespace NotepadByFerryPot.Services
                              @"(?<u><\s*[uU]\s*>(?<uContent>.+?)<\s*/\s*[uU]\s*>)|" +
                              @"(?<sup><\s*(?i:sup)\s*>(?<supContent>.+?)<\s*/\s*(?i:sup)\s*>)|" +
                              @"(?<sub><\s*(?i:sub)\s*>(?<subContent>.+?)<\s*/\s*(?i:sub)\s*>)|" +
-                             @"(?<mark>(?:<\s*(?i:mark)\s*>|==)(?<markContent>.+?)(?:<\s*/\s*(?i:mark)\s*>|==))";
+                             @"(?<mark><\s*(?i:mark)(?:\s+(?i:style)\s*=\s*[""']\s*background\s*:\s*(?<markColor>[^""';\s]+)\s*;?\s*[""'])?\s*>(?<markContent>.+?)<\s*/\s*(?i:mark)\s*>|==(?<markContent>.+?)==)";
 
             int lastIndex = 0;
             try
@@ -647,13 +700,44 @@ namespace NotepadByFerryPot.Services
                     else if (match.Groups["mark"].Success)
                     {
                         string content = match.Groups["markContent"].Value;
-                        var markSpan = new Span
+                        bool hasColorAttr = match.Groups["markColor"].Success;
+                        string colorHex;
+                        bool isValid = true;
+
+                        if (hasColorAttr)
                         {
-                            Background = new SolidColorBrush(Color.FromArgb(120, 255, 235, 59)),
-                            Tag = "mark"
-                        };
-                        AddFormattedInlinesInternal(markSpan.Inlines, content, foreground);
-                        inlines.Add(markSpan);
+                            string rawColor = match.Groups["markColor"].Value;
+                            if (IsValidHexColor(rawColor))
+                            {
+                                colorHex = rawColor.Trim().ToUpperInvariant();
+                            }
+                            else
+                            {
+                                // Validate the colour with a hex regex; reject anything else.
+                                isValid = false;
+                                colorHex = "";
+                            }
+                        }
+                        else
+                        {
+                            colorHex = "#FFF176";
+                        }
+
+                        if (isValid)
+                        {
+                            var markSpan = new Span
+                            {
+                                Background = CreateHighlightBrush(colorHex),
+                                Tag = $"mark:{colorHex}"
+                            };
+                            AddFormattedInlinesInternal(markSpan.Inlines, content, foreground);
+                            inlines.Add(markSpan);
+                        }
+                        else
+                        {
+                            // Rejected color: render content safely without highlight background
+                            AddFormattedInlinesInternal(inlines, content, foreground);
+                        }
                     }
 
                     lastIndex = match.Index + match.Length;

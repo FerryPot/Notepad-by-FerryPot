@@ -1,6 +1,7 @@
 using System;
 using System.Windows;
 using System.Windows.Documents;
+using System.Windows.Media;
 
 namespace NotepadByFerryPot.Controls
 {
@@ -41,6 +42,8 @@ namespace NotepadByFerryPot.Controls
                                              (sel.StartsWith("_") && sel.EndsWith("_") && !sel.StartsWith("__") && sel.Length >= 2);
                             state.IsStrikethrough = sel.StartsWith("~~") && sel.EndsWith("~~") && sel.Length >= 4;
                             state.IsUnderline = sel.StartsWith("<u>", StringComparison.OrdinalIgnoreCase) && sel.EndsWith("</u>", StringComparison.OrdinalIgnoreCase) && sel.Length >= 7;
+                            state.IsHighlight = (sel.StartsWith("<mark", StringComparison.OrdinalIgnoreCase) && sel.EndsWith("</mark>", StringComparison.OrdinalIgnoreCase) && sel.Length >= 13) ||
+                                                (sel.StartsWith("==") && sel.EndsWith("==") && sel.Length >= 4);
                         }
                     }
                     catch { }
@@ -72,6 +75,30 @@ namespace NotepadByFerryPot.Controls
                             {
                                 state.IsUnderline = true;
                             }
+                        }
+                    }
+
+                    object bg = sel.GetPropertyValue(TextElement.BackgroundProperty);
+                    if (bg is SolidColorBrush scb && scb.Color.A > 0 && scb != System.Windows.Media.Brushes.Transparent)
+                    {
+                        state.IsHighlight = true;
+                    }
+                    else
+                    {
+                        var inline = (FormattedRichTextBox.CaretPosition ?? sel.Start)?.Parent as Inline;
+                        while (inline != null)
+                        {
+                            if (inline.Background is SolidColorBrush iscb && iscb.Color.A > 0 && iscb != System.Windows.Media.Brushes.Transparent)
+                            {
+                                state.IsHighlight = true;
+                                break;
+                            }
+                            if (inline.Tag is string itag && itag.StartsWith("mark", StringComparison.OrdinalIgnoreCase))
+                            {
+                                state.IsHighlight = true;
+                                break;
+                            }
+                            inline = inline.Parent as Inline;
                         }
                     }
 
@@ -141,6 +168,7 @@ namespace NotepadByFerryPot.Controls
         public bool IsItalic { get; set; }
         public bool IsStrikethrough { get; set; }
         public bool IsUnderline { get; set; }
+        public bool IsHighlight { get; set; }
         public string Heading { get; set; } = "Normal";
         public bool IsList { get; set; }
     }

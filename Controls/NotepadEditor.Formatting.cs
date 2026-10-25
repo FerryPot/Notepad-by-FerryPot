@@ -759,6 +759,7 @@ namespace NotepadByFerryPot.Controls
             {
                 var range = new TextRange(FormattedRichTextBox.Selection.Start, FormattedRichTextBox.Selection.End);
                 range.ClearAllProperties();
+                range.ApplyPropertyValue(TextElement.BackgroundProperty, Brushes.Transparent);
                 var p = FormattedRichTextBox.CaretPosition.Paragraph;
                 if (p != null)
                 {
@@ -788,6 +789,7 @@ namespace NotepadByFerryPot.Controls
             try
             {
                 text = System.Text.RegularExpressions.Regex.Replace(text, @"\[([^\]]+)\]\([^\)]+\)", "$1", System.Text.RegularExpressions.RegexOptions.None, TimeSpan.FromSeconds(1));
+                text = System.Text.RegularExpressions.Regex.Replace(text, @"<mark[^>]*>", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1));
             }
             catch (System.Text.RegularExpressions.RegexMatchTimeoutException) { }
             text = text.Replace("**", "")
@@ -801,7 +803,6 @@ namespace NotepadByFerryPot.Controls
                        .Replace("</sup>", "", StringComparison.OrdinalIgnoreCase)
                        .Replace("<sub>", "", StringComparison.OrdinalIgnoreCase)
                        .Replace("</sub>", "", StringComparison.OrdinalIgnoreCase)
-                       .Replace("<mark>", "", StringComparison.OrdinalIgnoreCase)
                        .Replace("</mark>", "", StringComparison.OrdinalIgnoreCase)
                        .Replace("==", "");
 
@@ -841,6 +842,91 @@ namespace NotepadByFerryPot.Controls
             MainTextBox.Select(selStart, selLen);
             MainTextBox.SelectedText = cleaned;
             MainTextBox.Select(selStart, cleaned.Length);
+            MainTextBox.Focus();
+        }
+
+        public void ApplyHighlight(string? hexColor)
+        {
+            if (Document != null && Document.IsReadOnly) return;
+
+            if (_isFormattedView)
+            {
+                EnsureWordSelectionIfEmpty();
+                if (FormattedRichTextBox.Selection.IsEmpty) return;
+
+                if (string.IsNullOrEmpty(hexColor))
+                {
+                    // No highlight: remove background
+                    FormattedRichTextBox.Selection.ApplyPropertyValue(TextElement.BackgroundProperty, Brushes.Transparent);
+                }
+                else
+                {
+                    if (!MarkdownParserService.IsValidHexColor(hexColor)) return;
+                    hexColor = hexColor.Trim().ToUpperInvariant();
+                    var brush = MarkdownParserService.CreateHighlightBrush(hexColor);
+                    FormattedRichTextBox.Selection.ApplyPropertyValue(TextElement.BackgroundProperty, brush);
+                }
+
+                if (Document != null) Document.IsModified = true;
+                NotifyFormattingStateChanged();
+                FormattedRichTextBox.Focus();
+                return;
+            }
+
+            // Markdown syntax view
+            int selStart = MainTextBox.SelectionStart;
+            int selLen = MainTextBox.SelectionLength;
+
+            if (string.IsNullOrEmpty(hexColor))
+            {
+                // No highlight: strip mark tags from selection
+                if (selLen > 0)
+                {
+                    string selText = MainTextBox.SelectedText;
+                    try
+                    {
+                        selText = System.Text.RegularExpressions.Regex.Replace(selText, @"<mark[^>]*>", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1));
+                    }
+                    catch { }
+                    selText = selText.Replace("</mark>", "", StringComparison.OrdinalIgnoreCase).Replace("==", "");
+                    MainTextBox.SelectedText = selText;
+                    MainTextBox.Select(selStart, selText.Length);
+                }
+            }
+            else
+            {
+                if (!MarkdownParserService.IsValidHexColor(hexColor)) return;
+                hexColor = hexColor.Trim().ToUpperInvariant();
+                string openTag = $"<mark style=\"background:{hexColor}\">";
+                string closeTag = "</mark>";
+
+                if (selLen > 0)
+                {
+                    string selText = MainTextBox.SelectedText;
+                    string replacement;
+                    var markRegex = new System.Text.RegularExpressions.Regex(@"^<mark(?:\s+style=[""'][^""']*[""'])?>(?<inner>.*)</mark>$", System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Singleline, TimeSpan.FromSeconds(1));
+                    var m = markRegex.Match(selText);
+                    if (m.Success)
+                    {
+                        replacement = $"{openTag}{m.Groups["inner"].Value}{closeTag}";
+                    }
+                    else
+                    {
+                        replacement = $"{openTag}{selText}{closeTag}";
+                    }
+
+                    MainTextBox.SelectedText = replacement;
+                    MainTextBox.Select(selStart, replacement.Length);
+                }
+                else
+                {
+                    MainTextBox.SelectedText = $"{openTag}{closeTag}";
+                    MainTextBox.Select(selStart + openTag.Length, 0);
+                }
+            }
+
+            if (Document != null) Document.IsModified = true;
+            NotifyFormattingStateChanged();
             MainTextBox.Focus();
         }
 

@@ -379,6 +379,75 @@
                             </Button.ContextMenu>
                         </Button>
 
+                        <!-- Highlight Split Button -->
+                        <Border x:Name="HighlightBorder"
+                                CornerRadius="4"
+                                Margin="2,0,0,0"
+                                Background="Transparent"
+                                Height="28">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button x:Name="HighlightToolbarButton"
+                                        Style="{StaticResource MaterialDesignIconButton}"
+                                        materialDesign:ButtonAssist.CornerRadius="4,0,0,4"
+                                        Width="26" Height="28" Padding="0"
+                                        ToolTip="Highlight (re-apply last color)"
+                                        Click="Highlight_Click">
+                                    <Grid Width="20" Height="20">
+                                        <materialDesign:PackIcon x:Name="HighlightToolbarIcon" Kind="Marker" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,3" Foreground="{DynamicResource MaterialDesignBody}"/>
+                                        <Border x:Name="HighlightColorIndicator" Height="3" VerticalAlignment="Bottom" HorizontalAlignment="Stretch" Margin="2,0,2,0" Background="#FFF176" CornerRadius="1"/>
+                                    </Grid>
+                                </Button>
+                                <Button x:Name="HighlightDropdownButton"
+                                        Style="{StaticResource MaterialDesignIconButton}"
+                                        materialDesign:ButtonAssist.CornerRadius="0,4,4,0"
+                                        Width="16" Height="28" Padding="0"
+                                        ToolTip="Highlight Colors"
+                                        Click="HighlightMenu_Click">
+                                    <materialDesign:PackIcon x:Name="HighlightDropdownChevron" Kind="ChevronDown" Width="12" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource MaterialDesignBody}"/>
+                                    <Button.ContextMenu>
+                                        <ContextMenu x:Name="HighlightContextMenu">
+                                            <MenuItem Header="Yellow" Click="HighlightYellow_Click">
+                                                <MenuItem.Icon>
+                                                    <Border Width="16" Height="16" Background="#FFF176" CornerRadius="3" BorderBrush="#55000000" BorderThickness="0.5"/>
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                            <MenuItem Header="Green" Click="HighlightGreen_Click">
+                                                <MenuItem.Icon>
+                                                    <Border Width="16" Height="16" Background="#81C784" CornerRadius="3" BorderBrush="#55000000" BorderThickness="0.5"/>
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                            <MenuItem Header="Blue" Click="HighlightBlue_Click">
+                                                <MenuItem.Icon>
+                                                    <Border Width="16" Height="16" Background="#64B5F6" CornerRadius="3" BorderBrush="#55000000" BorderThickness="0.5"/>
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                            <MenuItem Header="Pink" Click="HighlightPink_Click">
+                                                <MenuItem.Icon>
+                                                    <Border Width="16" Height="16" Background="#F06292" CornerRadius="3" BorderBrush="#55000000" BorderThickness="0.5"/>
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                            <MenuItem Header="Orange" Click="HighlightOrange_Click">
+                                                <MenuItem.Icon>
+                                                    <Border Width="16" Height="16" Background="#FFB74D" CornerRadius="3" BorderBrush="#55000000" BorderThickness="0.5"/>
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                            <MenuItem Header="Purple" Click="HighlightPurple_Click">
+                                                <MenuItem.Icon>
+                                                    <Border Width="16" Height="16" Background="#BA68C8" CornerRadius="3" BorderBrush="#55000000" BorderThickness="0.5"/>
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                            <Separator/>
+                                            <MenuItem Header="No highlight" Click="HighlightNone_Click">
+                                                <MenuItem.Icon>
+                                                    <materialDesign:PackIcon Kind="FormatClear" Width="16" Height="16"/>
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                        </ContextMenu>
+                                    </Button.ContextMenu>
+                                </Button>
+                            </StackPanel>
+                        </Border>
+
                         <!-- Separator -->
                         <Rectangle Width="1" Height="14" Fill="{DynamicResource MaterialDesignDivider}" Margin="6,0,6,0" VerticalAlignment="Center"/>
 
@@ -488,6 +557,47 @@
                                     <MenuItem Header="Subscript (x₂)" Click="Subscript_Click">
                                         <MenuItem.Icon>
                                             <TextBlock Text="x₂" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                </MenuItem>
+                                <MenuItem Header="Highlight">
+                                    <MenuItem.Icon>
+                                        <materialDesign:PackIcon Kind="Marker"/>
+                                    </MenuItem.Icon>
+                                    <MenuItem Header="Yellow" Click="HighlightYellow_Click">
+                                        <MenuItem.Icon>
+                                            <Border Width="14" Height="14" Background="#FFF176" CornerRadius="2" BorderBrush="#55000000" BorderThickness="0.5"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="Green" Click="HighlightGreen_Click">
+                                        <MenuItem.Icon>
+                                            <Border Width="14" Height="14" Background="#81C784" CornerRadius="2" BorderBrush="#55000000" BorderThickness="0.5"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="Blue" Click="HighlightBlue_Click">
+                                        <MenuItem.Icon>
+                                            <Border Width="14" Height="14" Background="#64B5F6" CornerRadius="2" BorderBrush="#55000000" BorderThickness="0.5"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="Pink" Click="HighlightPink_Click">
+                                        <MenuItem.Icon>
+                                            <Border Width="14" Height="14" Background="#F06292" CornerRadius="2" BorderBrush="#55000000" BorderThickness="0.5"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="Orange" Click="HighlightOrange_Click">
+                                        <MenuItem.Icon>
+                                            <Border Width="14" Height="14" Background="#FFB74D" CornerRadius="2" BorderBrush="#55000000" BorderThickness="0.5"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="Purple" Click="HighlightPurple_Click">
+                                        <MenuItem.Icon>
+                                            <Border Width="14" Height="14" Background="#BA68C8" CornerRadius="2" BorderBrush="#55000000" BorderThickness="0.5"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <Separator/>
+                                    <MenuItem Header="No highlight" Click="HighlightNone_Click">
+                                        <MenuItem.Icon>
+                                            <materialDesign:PackIcon Kind="FormatClear"/>
                                         </MenuItem.Icon>
                                     </MenuItem>
                                 </MenuItem>

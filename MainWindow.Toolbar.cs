@@ -10,6 +10,8 @@ namespace NotepadByFerryPot
 {
     public partial class MainWindow : Window
     {
+        private string _lastHighlightColor = "#FFF176";
+
         #region Formatting Toolbar Handlers
 
         private void HeadingMenu_Click(object sender, RoutedEventArgs e)
@@ -68,6 +70,50 @@ namespace NotepadByFerryPot
         private void Superscript_Click(object sender, RoutedEventArgs e) { if (_activeDocument?.IsReadOnly == true) return; ActiveEditor.ToggleSuperscript(); }
         private void Subscript_Click(object sender, RoutedEventArgs e) { if (_activeDocument?.IsReadOnly == true) return; ActiveEditor.ToggleSubscript(); }
 
+        private void Highlight_Click(object sender, RoutedEventArgs e)
+        {
+            if (_activeDocument?.IsReadOnly == true) return;
+            ActiveEditor.ApplyHighlight(_lastHighlightColor);
+        }
+
+        private void HighlightMenu_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.ContextMenu != null)
+            {
+                btn.ContextMenu.PlacementTarget = HighlightBorder ?? (UIElement)btn;
+                btn.ContextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+                btn.ContextMenu.IsOpen = true;
+            }
+        }
+
+        private void SetHighlightColor(string? hex)
+        {
+            if (_activeDocument?.IsReadOnly == true) return;
+            if (hex != null)
+            {
+                _lastHighlightColor = hex;
+                try
+                {
+                    if (HighlightColorIndicator != null)
+                    {
+                        var brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex));
+                        brush.Freeze();
+                        HighlightColorIndicator.Background = brush;
+                    }
+                }
+                catch { }
+            }
+            ActiveEditor.ApplyHighlight(hex);
+        }
+
+        private void HighlightYellow_Click(object sender, RoutedEventArgs e) => SetHighlightColor("#FFF176");
+        private void HighlightGreen_Click(object sender, RoutedEventArgs e) => SetHighlightColor("#81C784");
+        private void HighlightBlue_Click(object sender, RoutedEventArgs e) => SetHighlightColor("#64B5F6");
+        private void HighlightPink_Click(object sender, RoutedEventArgs e) => SetHighlightColor("#F06292");
+        private void HighlightOrange_Click(object sender, RoutedEventArgs e) => SetHighlightColor("#FFB74D");
+        private void HighlightPurple_Click(object sender, RoutedEventArgs e) => SetHighlightColor("#BA68C8");
+        private void HighlightNone_Click(object sender, RoutedEventArgs e) => SetHighlightColor(null);
+
         private void Link_Click(object sender, RoutedEventArgs e) { if (_activeDocument?.IsReadOnly == true) return; ActiveEditor.InsertLink(); }
 
         private void TableMenu_Click(object sender, RoutedEventArgs e)
@@ -104,8 +150,8 @@ namespace NotepadByFerryPot
         {
             if (FullToolbarPanel == null || OverflowToolbarButton == null) return;
 
-            // When window width is narrow (< 820px), collapse full toolbar and show "..." overflow button
-            bool isNarrow = ActualWidth < 820;
+            // When window width is narrow (< 870px), collapse full toolbar and show "..." overflow button
+            bool isNarrow = ActualWidth < 870;
             FullToolbarPanel.Visibility = isNarrow ? Visibility.Collapsed : Visibility.Visible;
             OverflowToolbarButton.Visibility = isNarrow ? Visibility.Visible : Visibility.Collapsed;
         }
@@ -202,6 +248,14 @@ namespace NotepadByFerryPot
             ListDropdownButton.Background = state.IsList ? highlightBackground : Brushes.Transparent;
             ListDropdownIcon.Foreground = state.IsList ? activeIconBrush : bodyBrush;
             ListDropdownChevron.Foreground = state.IsList ? activeIconBrush : bodyBrush;
+
+            // Highlight
+            if (HighlightBorder != null && HighlightToolbarIcon != null && HighlightDropdownChevron != null)
+            {
+                HighlightBorder.Background = state.IsHighlight ? highlightBackground : Brushes.Transparent;
+                HighlightToolbarIcon.Foreground = state.IsHighlight ? activeIconBrush : bodyBrush;
+                HighlightDropdownChevron.Foreground = state.IsHighlight ? activeIconBrush : bodyBrush;
+            }
         }
 
         #endregion
