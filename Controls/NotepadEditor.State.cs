@@ -32,6 +32,16 @@ namespace NotepadByFerryPot.Controls
                         {
                             state.Heading = "Normal";
                         }
+
+                        string sel = MainTextBox.SelectedText;
+                        if (!string.IsNullOrEmpty(sel))
+                        {
+                            state.IsBold = sel.StartsWith("**") && sel.EndsWith("**") && sel.Length >= 4;
+                            state.IsItalic = (sel.StartsWith("*") && sel.EndsWith("*") && !sel.StartsWith("**") && sel.Length >= 2) ||
+                                             (sel.StartsWith("_") && sel.EndsWith("_") && !sel.StartsWith("__") && sel.Length >= 2);
+                            state.IsStrikethrough = sel.StartsWith("~~") && sel.EndsWith("~~") && sel.Length >= 4;
+                            state.IsUnderline = sel.StartsWith("<u>", StringComparison.OrdinalIgnoreCase) && sel.EndsWith("</u>", StringComparison.OrdinalIgnoreCase) && sel.Length >= 7;
+                        }
                     }
                     catch { }
                 }
@@ -57,7 +67,10 @@ namespace NotepadByFerryPot.Controls
                             if (dec.Location == TextDecorationLocation.Strikethrough)
                             {
                                 state.IsStrikethrough = true;
-                                break;
+                            }
+                            if (dec.Location == TextDecorationLocation.Underline)
+                            {
+                                state.IsUnderline = true;
                             }
                         }
                     }
@@ -127,6 +140,7 @@ namespace NotepadByFerryPot.Controls
         public bool IsBold { get; set; }
         public bool IsItalic { get; set; }
         public bool IsStrikethrough { get; set; }
+        public bool IsUnderline { get; set; }
         public string Heading { get; set; } = "Normal";
         public bool IsList { get; set; }
     }

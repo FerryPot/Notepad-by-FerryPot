@@ -87,6 +87,20 @@ namespace NotepadByFerryPot.Controls
                     else
                         range.ApplyPropertyValue(Inline.TextDecorationsProperty, TextDecorations.Strikethrough);
                 }
+                else if (prefix == "<u>")
+                {
+                    EditingCommands.ToggleUnderline.Execute(null, FormattedRichTextBox);
+                }
+                else if (prefix == "<sup>")
+                {
+                    ToggleSuperscript();
+                    return;
+                }
+                else if (prefix == "<sub>")
+                {
+                    ToggleSubscript();
+                    return;
+                }
                 else if (prefix == "`")
                 {
                     var range = FormattedRichTextBox.Selection;
@@ -179,10 +193,10 @@ namespace NotepadByFerryPot.Controls
                 int wordStart = selStart;
                 int wordEnd = selStart;
 
-                while (wordStart > 0 && !char.IsWhiteSpace(text[wordStart - 1]) && text[wordStart - 1] != '*' && text[wordStart - 1] != '~' && text[wordStart - 1] != '`')
+                while (wordStart > 0 && !char.IsWhiteSpace(text[wordStart - 1]) && text[wordStart - 1] != '*' && text[wordStart - 1] != '~' && text[wordStart - 1] != '`' && text[wordStart - 1] != '<' && text[wordStart - 1] != '>')
                     wordStart--;
 
-                while (wordEnd < text.Length && !char.IsWhiteSpace(text[wordEnd]) && text[wordEnd] != '*' && text[wordEnd] != '~' && text[wordEnd] != '`')
+                while (wordEnd < text.Length && !char.IsWhiteSpace(text[wordEnd]) && text[wordEnd] != '*' && text[wordEnd] != '~' && text[wordEnd] != '`' && text[wordEnd] != '<' && text[wordEnd] != '>')
                     wordEnd++;
 
                 if (wordEnd > wordStart)
@@ -274,6 +288,9 @@ namespace NotepadByFerryPot.Controls
             if (prefix == "~~") return text.Replace("~~", "");
             if (prefix == "*") return System.Text.RegularExpressions.Regex.Replace(text, @"(?<!\*)\*(?!\*)", "");
             if (prefix == "`") return text.Replace("`", "");
+            if (prefix == "<u>") return text.Replace("<u>", "", StringComparison.OrdinalIgnoreCase).Replace("</u>", "", StringComparison.OrdinalIgnoreCase);
+            if (prefix == "<sup>") return text.Replace("<sup>", "", StringComparison.OrdinalIgnoreCase).Replace("</sup>", "", StringComparison.OrdinalIgnoreCase);
+            if (prefix == "<sub>") return text.Replace("<sub>", "", StringComparison.OrdinalIgnoreCase).Replace("</sub>", "", StringComparison.OrdinalIgnoreCase);
             return text.Replace(prefix, "").Replace(suffix, "");
         }
 
@@ -284,6 +301,9 @@ namespace NotepadByFerryPot.Controls
             if (prefix == "~~") return text.Contains("~~");
             if (prefix == "*") return System.Text.RegularExpressions.Regex.IsMatch(text, @"(?<!\*)\*(?!\*)");
             if (prefix == "`") return text.Contains("`");
+            if (prefix == "<u>") return text.IndexOf("<u>", StringComparison.OrdinalIgnoreCase) >= 0;
+            if (prefix == "<sup>") return text.IndexOf("<sup>", StringComparison.OrdinalIgnoreCase) >= 0;
+            if (prefix == "<sub>") return text.IndexOf("<sub>", StringComparison.OrdinalIgnoreCase) >= 0;
             return text.Contains(prefix);
         }
 
@@ -774,7 +794,16 @@ namespace NotepadByFerryPot.Controls
                        .Replace("__", "")
                        .Replace("~~", "")
                        .Replace("`", "")
-                       .Replace("*", "");
+                       .Replace("*", "")
+                       .Replace("<u>", "", StringComparison.OrdinalIgnoreCase)
+                       .Replace("</u>", "", StringComparison.OrdinalIgnoreCase)
+                       .Replace("<sup>", "", StringComparison.OrdinalIgnoreCase)
+                       .Replace("</sup>", "", StringComparison.OrdinalIgnoreCase)
+                       .Replace("<sub>", "", StringComparison.OrdinalIgnoreCase)
+                       .Replace("</sub>", "", StringComparison.OrdinalIgnoreCase)
+                       .Replace("<mark>", "", StringComparison.OrdinalIgnoreCase)
+                       .Replace("</mark>", "", StringComparison.OrdinalIgnoreCase)
+                       .Replace("==", "");
 
             var lines = text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
             for (int i = 0; i < lines.Length; i++)
@@ -815,6 +844,243 @@ namespace NotepadByFerryPot.Controls
             MainTextBox.Focus();
         }
 
+        #region Text Tools (Case, Font Size, Superscript/Subscript)
+
+        public void ChangeCase(CaseTransformType transform)
+        {
+            if (Document != null && Document.IsReadOnly) return;
+
+            if (_isFormattedView)
+            {
+                if (FormattedRichTextBox.Selection.IsEmpty)
+                {
+                    EnsureWordSelectionIfEmpty();
+                }
+                if (FormattedRichTextBox.Selection.IsEmpty) return;
+
+                string text = FormattedRichTextBox.Selection.Text;
+                if (!string.IsNullOrEmpty(text))
+                {
+                    string transformed = TransformCase(text, transform);
+                    FormattedRichTextBox.Selection.Text = transformed;
+                    if (Document != null) Document.IsModified = true;
+                }
+                FormattedRichTextBox.Focus();
+                return;
+            }
+
+            int selStart = MainTextBox.SelectionStart;
+            int selLen = MainTextBox.SelectionLength;
+
+            if (selLen == 0)
+            {
+                int caret = MainTextBox.CaretIndex;
+                string full = MainTextBox.Text;
+                int ws = caret;
+                while (ws > 0 && !char.IsWhiteSpace(full[ws - 1]) && !char.IsPunctuation(full[ws - 1])) ws--;
+                int we = caret;
+                while (we < full.Length && !char.IsWhiteSpace(full[we]) && !char.IsPunctuation(full[we])) we++;
+                if (we > ws)
+                {
+                    selStart = ws;
+                    selLen = we - ws;
+                    MainTextBox.Select(selStart, selLen);
+                }
+            }
+
+            if (selLen > 0)
+            {
+                string text = MainTextBox.SelectedText;
+                string transformed = TransformCase(text, transform);
+                MainTextBox.SelectedText = transformed;
+                MainTextBox.Select(selStart, transformed.Length);
+            }
+            MainTextBox.Focus();
+        }
+
+        private static string TransformCase(string input, CaseTransformType transform)
+        {
+            if (string.IsNullOrEmpty(input)) return input;
+
+            return transform switch
+            {
+                CaseTransformType.Lower => input.ToLower(),
+                CaseTransformType.Upper => input.ToUpper(),
+                CaseTransformType.Title => TransformToTitleCase(input),
+                CaseTransformType.Sentence => TransformToSentenceCase(input),
+                CaseTransformType.Toggle => TransformToToggleCase(input),
+                _ => input
+            };
+        }
+
+        private static string TransformToTitleCase(string input)
+        {
+            var sb = new StringBuilder(input.Length);
+            bool newWord = true;
+            foreach (char c in input)
+            {
+                if (char.IsLetter(c))
+                {
+                    sb.Append(newWord ? char.ToUpper(c) : char.ToLower(c));
+                    newWord = false;
+                }
+                else
+                {
+                    sb.Append(c);
+                    if (char.IsWhiteSpace(c) || c == '-' || c == '/' || c == '(' || c == '[' || c == '"' || c == '\'' || c == '_')
+                    {
+                        newWord = true;
+                    }
+                }
+            }
+            return sb.ToString();
+        }
+
+        private static string TransformToSentenceCase(string input)
+        {
+            var sb = new StringBuilder(input.Length);
+            bool capitalizeNext = true;
+            foreach (char c in input)
+            {
+                if (char.IsLetter(c))
+                {
+                    sb.Append(capitalizeNext ? char.ToUpper(c) : char.ToLower(c));
+                    capitalizeNext = false;
+                }
+                else
+                {
+                    sb.Append(c);
+                    if (c == '.' || c == '!' || c == '?' || c == '\n')
+                    {
+                        capitalizeNext = true;
+                    }
+                }
+            }
+            return sb.ToString();
+        }
+
+        private static string TransformToToggleCase(string input)
+        {
+            var sb = new StringBuilder(input.Length);
+            foreach (char c in input)
+            {
+                if (char.IsUpper(c)) sb.Append(char.ToLower(c));
+                else if (char.IsLower(c)) sb.Append(char.ToUpper(c));
+                else sb.Append(c);
+            }
+            return sb.ToString();
+        }
+
+        public void ChangeSelectionFontSize(double delta)
+        {
+            if (Document != null && Document.IsReadOnly) return;
+
+            if (_isFormattedView)
+            {
+                if (FormattedRichTextBox.Selection.IsEmpty)
+                {
+                    EnsureWordSelectionIfEmpty();
+                }
+                if (FormattedRichTextBox.Selection.IsEmpty) return;
+
+                object currentVal = FormattedRichTextBox.Selection.GetPropertyValue(TextElement.FontSizeProperty);
+                double currentSize = (currentVal is double d && !double.IsNaN(d)) ? d : SettingsService.Current.FontSize;
+                double newSize = Math.Clamp(currentSize + delta, 8.0, 72.0);
+                FormattedRichTextBox.Selection.ApplyPropertyValue(TextElement.FontSizeProperty, newSize);
+                if (Document != null) Document.IsModified = true;
+                FormattedRichTextBox.Focus();
+                return;
+            }
+
+            // In syntax view, adjust editor font size
+            var s = SettingsService.Current;
+            s.FontSize = Math.Clamp(s.FontSize + delta, 8.0, 72.0);
+            s.ZoomLevel = (s.FontSize / 15.0) * 100.0;
+            ApplySettings();
+            MainTextBox.Focus();
+        }
+
+        public void ToggleSuperscript()
+        {
+            if (Document != null && Document.IsReadOnly) return;
+
+            if (_isFormattedView)
+            {
+                if (FormattedRichTextBox.Selection.IsEmpty)
+                {
+                    EnsureWordSelectionIfEmpty();
+                }
+                if (FormattedRichTextBox.Selection.IsEmpty) return;
+
+                object currentAlign = FormattedRichTextBox.Selection.GetPropertyValue(Inline.BaselineAlignmentProperty);
+                bool isSuper = currentAlign is BaselineAlignment ba && ba == BaselineAlignment.Superscript;
+
+                if (isSuper)
+                {
+                    FormattedRichTextBox.Selection.ApplyPropertyValue(Inline.BaselineAlignmentProperty, BaselineAlignment.Baseline);
+                    FormattedRichTextBox.Selection.ApplyPropertyValue(TextElement.FontSizeProperty, SettingsService.Current.FontSize);
+                }
+                else
+                {
+                    FormattedRichTextBox.Selection.ApplyPropertyValue(Inline.BaselineAlignmentProperty, BaselineAlignment.Superscript);
+                    FormattedRichTextBox.Selection.ApplyPropertyValue(TextElement.FontSizeProperty, Math.Max(8.0, SettingsService.Current.FontSize * 0.75));
+                }
+
+                if (Document != null) Document.IsModified = true;
+                NotifyFormattingStateChanged();
+                FormattedRichTextBox.Focus();
+                return;
+            }
+
+            ToggleWrap("<sup>", "</sup>");
+        }
+
+        public void ToggleSubscript()
+        {
+            if (Document != null && Document.IsReadOnly) return;
+
+            if (_isFormattedView)
+            {
+                if (FormattedRichTextBox.Selection.IsEmpty)
+                {
+                    EnsureWordSelectionIfEmpty();
+                }
+                if (FormattedRichTextBox.Selection.IsEmpty) return;
+
+                object currentAlign = FormattedRichTextBox.Selection.GetPropertyValue(Inline.BaselineAlignmentProperty);
+                bool isSub = currentAlign is BaselineAlignment ba && ba == BaselineAlignment.Subscript;
+
+                if (isSub)
+                {
+                    FormattedRichTextBox.Selection.ApplyPropertyValue(Inline.BaselineAlignmentProperty, BaselineAlignment.Baseline);
+                    FormattedRichTextBox.Selection.ApplyPropertyValue(TextElement.FontSizeProperty, SettingsService.Current.FontSize);
+                }
+                else
+                {
+                    FormattedRichTextBox.Selection.ApplyPropertyValue(Inline.BaselineAlignmentProperty, BaselineAlignment.Subscript);
+                    FormattedRichTextBox.Selection.ApplyPropertyValue(TextElement.FontSizeProperty, Math.Max(8.0, SettingsService.Current.FontSize * 0.75));
+                }
+
+                if (Document != null) Document.IsModified = true;
+                NotifyFormattingStateChanged();
+                FormattedRichTextBox.Focus();
+                return;
+            }
+
+            ToggleWrap("<sub>", "</sub>");
+        }
+
         #endregion
+
+        #endregion
+    }
+
+    public enum CaseTransformType
+    {
+        Lower,
+        Upper,
+        Title,
+        Sentence,
+        Toggle
     }
 }

@@ -234,6 +234,11 @@ namespace NotepadByFerryPot
                 e.Handled = true;
                 Italic_Click(sender, e);
             }
+            else if (ctrl && !shift && e.Key == Key.U)
+            {
+                e.Handled = true;
+                Underline_Click(sender, e);
+            }
             else if (ctrl && e.Key == Key.K)
             {
                 e.Handled = true;

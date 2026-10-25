@@ -45,6 +45,29 @@ namespace NotepadByFerryPot
         private void Bold_Click(object sender, RoutedEventArgs e) { if (_activeDocument?.IsReadOnly == true) return; ActiveEditor.ToggleWrap("**", "**"); }
         private void Italic_Click(object sender, RoutedEventArgs e) { if (_activeDocument?.IsReadOnly == true) return; ActiveEditor.ToggleWrap("*", "*"); }
         private void Strikethrough_Click(object sender, RoutedEventArgs e) { if (_activeDocument?.IsReadOnly == true) return; ActiveEditor.ToggleWrap("~~", "~~"); }
+        private void Underline_Click(object sender, RoutedEventArgs e) { if (_activeDocument?.IsReadOnly == true) return; ActiveEditor.ToggleWrap("<u>", "</u>"); }
+
+        private void TextToolsMenu_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.ContextMenu != null)
+            {
+                btn.ContextMenu.PlacementTarget = btn;
+                btn.ContextMenu.IsOpen = true;
+            }
+        }
+
+        private void CaseLower_Click(object sender, RoutedEventArgs e) { if (_activeDocument?.IsReadOnly == true) return; ActiveEditor.ChangeCase(CaseTransformType.Lower); }
+        private void CaseUpper_Click(object sender, RoutedEventArgs e) { if (_activeDocument?.IsReadOnly == true) return; ActiveEditor.ChangeCase(CaseTransformType.Upper); }
+        private void CaseTitle_Click(object sender, RoutedEventArgs e) { if (_activeDocument?.IsReadOnly == true) return; ActiveEditor.ChangeCase(CaseTransformType.Title); }
+        private void CaseSentence_Click(object sender, RoutedEventArgs e) { if (_activeDocument?.IsReadOnly == true) return; ActiveEditor.ChangeCase(CaseTransformType.Sentence); }
+        private void CaseToggle_Click(object sender, RoutedEventArgs e) { if (_activeDocument?.IsReadOnly == true) return; ActiveEditor.ChangeCase(CaseTransformType.Toggle); }
+
+        private void FontSizeIncrease_Click(object sender, RoutedEventArgs e) { if (_activeDocument?.IsReadOnly == true) return; ActiveEditor.ChangeSelectionFontSize(2.0); }
+        private void FontSizeDecrease_Click(object sender, RoutedEventArgs e) { if (_activeDocument?.IsReadOnly == true) return; ActiveEditor.ChangeSelectionFontSize(-2.0); }
+
+        private void Superscript_Click(object sender, RoutedEventArgs e) { if (_activeDocument?.IsReadOnly == true) return; ActiveEditor.ToggleSuperscript(); }
+        private void Subscript_Click(object sender, RoutedEventArgs e) { if (_activeDocument?.IsReadOnly == true) return; ActiveEditor.ToggleSubscript(); }
+
         private void Link_Click(object sender, RoutedEventArgs e) { if (_activeDocument?.IsReadOnly == true) return; ActiveEditor.InsertLink(); }
 
         private void TableMenu_Click(object sender, RoutedEventArgs e)
@@ -160,6 +183,13 @@ namespace NotepadByFerryPot
             // Strikethrough
             StrikethroughToolbarButton.Background = state.IsStrikethrough ? highlightBackground : Brushes.Transparent;
             StrikethroughToolbarText.Foreground = state.IsStrikethrough ? activeIconBrush : bodyBrush;
+
+            // Underline
+            if (UnderlineToolbarButton != null && UnderlineToolbarText != null)
+            {
+                UnderlineToolbarButton.Background = state.IsUnderline ? highlightBackground : Brushes.Transparent;
+                UnderlineToolbarText.Foreground = state.IsUnderline ? activeIconBrush : bodyBrush;
+            }
 
             // Heading Dropdown
             HeadingDropdownText.Text = state.Heading;

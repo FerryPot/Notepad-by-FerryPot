@@ -323,6 +323,62 @@
                             <TextBlock x:Name="StrikethroughToolbarText" Text="S" TextDecorations="Strikethrough" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{DynamicResource MaterialDesignBody}"/>
                         </Button>
 
+                        <!-- Underline -->
+                        <Button x:Name="UnderlineToolbarButton"
+                                Style="{StaticResource MaterialDesignIconButton}"
+                                materialDesign:ButtonAssist.CornerRadius="4"
+                                Width="28" Height="28" Padding="0"
+                                Margin="2,0,0,0"
+                                ToolTip="Underline (Ctrl+U)"
+                                Click="Underline_Click">
+                            <TextBlock x:Name="UnderlineToolbarText" Text="U" TextDecorations="Underline" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{DynamicResource MaterialDesignBody}"/>
+                        </Button>
+
+                        <!-- "Aa" Text Tools Dropdown -->
+                        <Button x:Name="TextToolsDropdownButton"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                materialDesign:ButtonAssist.CornerRadius="4"
+                                Padding="6,0" Height="28"
+                                Margin="2,0,0,0"
+                                ToolTip="Text Tools &amp; Case"
+                                Click="TextToolsMenu_Click">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="Aa" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" Margin="0,0,3,0" Foreground="{DynamicResource MaterialDesignBody}"/>
+                                <materialDesign:PackIcon Kind="ChevronDown" Width="14" Height="14" VerticalAlignment="Center" Foreground="{DynamicResource MaterialDesignBody}"/>
+                            </StackPanel>
+                            <Button.ContextMenu>
+                                <ContextMenu x:Name="TextToolsContextMenu">
+                                    <MenuItem Header="lowercase" Click="CaseLower_Click"/>
+                                    <MenuItem Header="UPPERCASE" Click="CaseUpper_Click"/>
+                                    <MenuItem Header="Capitalize Each Word" Click="CaseTitle_Click"/>
+                                    <MenuItem Header="Sentence case" Click="CaseSentence_Click"/>
+                                    <MenuItem Header="tOGGLE cASE" Click="CaseToggle_Click"/>
+                                    <Separator/>
+                                    <MenuItem Header="Increase Font Size (A+)" Click="FontSizeIncrease_Click">
+                                        <MenuItem.Icon>
+                                            <TextBlock Text="A+" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="Decrease Font Size (A-)" Click="FontSizeDecrease_Click">
+                                        <MenuItem.Icon>
+                                            <TextBlock Text="A-" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <Separator/>
+                                    <MenuItem Header="Superscript (x²)" Click="Superscript_Click">
+                                        <MenuItem.Icon>
+                                            <TextBlock Text="x²" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="Subscript (x₂)" Click="Subscript_Click">
+                                        <MenuItem.Icon>
+                                            <TextBlock Text="x₂" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                </ContextMenu>
+                            </Button.ContextMenu>
+                        </Button>
+
                         <!-- Separator -->
                         <Rectangle Width="1" Height="14" Fill="{DynamicResource MaterialDesignDivider}" Margin="6,0,6,0" VerticalAlignment="Center"/>
 
@@ -397,6 +453,43 @@
                                     <MenuItem.Icon>
                                         <TextBlock Text="S" TextDecorations="Strikethrough" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"/>
                                     </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="Underline (Ctrl+U)" Click="Underline_Click">
+                                    <MenuItem.Icon>
+                                        <TextBlock Text="U" TextDecorations="Underline" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="Text Tools &amp; Case">
+                                    <MenuItem.Icon>
+                                        <TextBlock Text="Aa" FontWeight="Bold" FontSize="13" HorizontalAlignment="Center"/>
+                                    </MenuItem.Icon>
+                                    <MenuItem Header="lowercase" Click="CaseLower_Click"/>
+                                    <MenuItem Header="UPPERCASE" Click="CaseUpper_Click"/>
+                                    <MenuItem Header="Capitalize Each Word" Click="CaseTitle_Click"/>
+                                    <MenuItem Header="Sentence case" Click="CaseSentence_Click"/>
+                                    <MenuItem Header="tOGGLE cASE" Click="CaseToggle_Click"/>
+                                    <Separator/>
+                                    <MenuItem Header="Increase Font Size (A+)" Click="FontSizeIncrease_Click">
+                                        <MenuItem.Icon>
+                                            <TextBlock Text="A+" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="Decrease Font Size (A-)" Click="FontSizeDecrease_Click">
+                                        <MenuItem.Icon>
+                                            <TextBlock Text="A-" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <Separator/>
+                                    <MenuItem Header="Superscript (x²)" Click="Superscript_Click">
+                                        <MenuItem.Icon>
+                                            <TextBlock Text="x²" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="Subscript (x₂)" Click="Subscript_Click">
+                                        <MenuItem.Icon>
+                                            <TextBlock Text="x₂" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
                                 </MenuItem>
                                 <Separator/>
                                 <MenuItem Header="Bulleted List" Click="BulletList_Click">

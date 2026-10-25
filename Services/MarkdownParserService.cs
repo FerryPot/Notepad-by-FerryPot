@@ -387,6 +387,11 @@ namespace NotepadByFerryPot.Services
             if (inline is Span sp)
             {
                 bool hasStrike = sp.TextDecorations != null && sp.TextDecorations.Any(d => d.Location == TextDecorationLocation.Strikethrough);
+                bool hasUnderline = sp.TextDecorations != null && sp.TextDecorations.Any(d => d.Location == TextDecorationLocation.Underline);
+                bool isSup = sp.BaselineAlignment == BaselineAlignment.Superscript || (sp.Tag as string == "sup");
+                bool isSub = sp.BaselineAlignment == BaselineAlignment.Subscript || (sp.Tag as string == "sub");
+                bool isMark = sp.Tag as string == "mark" || (sp.Background is SolidColorBrush mBrush && mBrush.Color.A > 0 && mBrush != Brushes.Transparent);
+
                 bool isBold = (sp.FontWeight == FontWeights.Bold || sp.FontWeight == FontWeights.SemiBold || sp.FontWeight == FontWeights.ExtraBold) && !isParentBold;
                 bool isItalic = (sp.FontStyle == FontStyles.Italic) && !isParentItalic;
 
@@ -410,6 +415,26 @@ namespace NotepadByFerryPot.Services
                     inner = $"~~{inner}~~";
                 }
 
+                if (hasUnderline)
+                {
+                    inner = $"<u>{inner}</u>";
+                }
+
+                if (isSup)
+                {
+                    inner = $"<sup>{inner}</sup>";
+                }
+
+                if (isSub)
+                {
+                    inner = $"<sub>{inner}</sub>";
+                }
+
+                if (isMark)
+                {
+                    inner = $"<mark>{inner}</mark>";
+                }
+
                 return inner;
             }
 
@@ -424,6 +449,11 @@ namespace NotepadByFerryPot.Services
                 }
 
                 bool hasStrike = r.TextDecorations != null && r.TextDecorations.Any(d => d.Location == TextDecorationLocation.Strikethrough);
+                bool hasUnderline = r.TextDecorations != null && r.TextDecorations.Any(d => d.Location == TextDecorationLocation.Underline);
+                bool isSup = r.BaselineAlignment == BaselineAlignment.Superscript || (r.Tag as string == "sup");
+                bool isSub = r.BaselineAlignment == BaselineAlignment.Subscript || (r.Tag as string == "sub");
+                bool isMark = r.Tag as string == "mark";
+
                 bool isBold = (r.FontWeight == FontWeights.Bold || r.FontWeight == FontWeights.SemiBold || r.FontWeight == FontWeights.ExtraBold) && !isParentBold;
                 bool isItalic = (r.FontStyle == FontStyles.Italic) && !isParentItalic;
 
@@ -444,6 +474,26 @@ namespace NotepadByFerryPot.Services
                 if (hasStrike)
                 {
                     result = $"~~{result}~~";
+                }
+
+                if (hasUnderline)
+                {
+                    result = $"<u>{result}</u>";
+                }
+
+                if (isSup)
+                {
+                    result = $"<sup>{result}</sup>";
+                }
+
+                if (isSub)
+                {
+                    result = $"<sub>{result}</sub>";
+                }
+
+                if (isMark)
+                {
+                    result = $"<mark>{result}</mark>";
                 }
 
                 return result;
@@ -472,7 +522,11 @@ namespace NotepadByFerryPot.Services
                              @"(?<bolditalic>(?:\*\*\*|___|\*\*_|__\*)(?<biContent>.+?)(?:\*\*\*|___|_\*\*|\*__))|" +
                              @"(?<bold>(?:\*\*|__)(?<bContent>.+?)(?:\*\*|__))|" +
                              @"(?<strike>~~(?<sContent>.+?)~~)|" +
-                             @"(?<italic>(?:\*(?<iContent>[^*\n]+?)\*|(?<!\w)_(?<iContent>[^_\n]+?)_(?!\w)))";
+                             @"(?<italic>(?:\*(?<iContent>[^*\n]+?)\*|(?<!\w)_(?<iContent>[^_\n]+?)_(?!\w)))|" +
+                             @"(?<u><\s*[uU]\s*>(?<uContent>.+?)<\s*/\s*[uU]\s*>)|" +
+                             @"(?<sup><\s*(?i:sup)\s*>(?<supContent>.+?)<\s*/\s*(?i:sup)\s*>)|" +
+                             @"(?<sub><\s*(?i:sub)\s*>(?<subContent>.+?)<\s*/\s*(?i:sub)\s*>)|" +
+                             @"(?<mark>(?:<\s*(?i:mark)\s*>|==)(?<markContent>.+?)(?:<\s*/\s*(?i:mark)\s*>|==))";
 
             int lastIndex = 0;
             try
@@ -558,6 +612,48 @@ namespace NotepadByFerryPot.Services
                         var italic = new Italic();
                         AddFormattedInlinesInternal(italic.Inlines, content, foreground);
                         inlines.Add(italic);
+                    }
+                    else if (match.Groups["u"].Success)
+                    {
+                        string content = match.Groups["uContent"].Value;
+                        var uSpan = new Span { TextDecorations = TextDecorations.Underline, Tag = "u" };
+                        AddFormattedInlinesInternal(uSpan.Inlines, content, foreground);
+                        inlines.Add(uSpan);
+                    }
+                    else if (match.Groups["sup"].Success)
+                    {
+                        string content = match.Groups["supContent"].Value;
+                        var supSpan = new Span
+                        {
+                            BaselineAlignment = BaselineAlignment.Superscript,
+                            FontSize = 11,
+                            Tag = "sup"
+                        };
+                        AddFormattedInlinesInternal(supSpan.Inlines, content, foreground);
+                        inlines.Add(supSpan);
+                    }
+                    else if (match.Groups["sub"].Success)
+                    {
+                        string content = match.Groups["subContent"].Value;
+                        var subSpan = new Span
+                        {
+                            BaselineAlignment = BaselineAlignment.Subscript,
+                            FontSize = 11,
+                            Tag = "sub"
+                        };
+                        AddFormattedInlinesInternal(subSpan.Inlines, content, foreground);
+                        inlines.Add(subSpan);
+                    }
+                    else if (match.Groups["mark"].Success)
+                    {
+                        string content = match.Groups["markContent"].Value;
+                        var markSpan = new Span
+                        {
+                            Background = new SolidColorBrush(Color.FromArgb(120, 255, 235, 59)),
+                            Tag = "mark"
+                        };
+                        AddFormattedInlinesInternal(markSpan.Inlines, content, foreground);
+                        inlines.Add(markSpan);
                     }
 
                     lastIndex = match.Index + match.Length;
