@@ -249,15 +249,25 @@ namespace NotepadByFerryPot.Controls
             }
         }
 
+        public double EffectiveFontSize
+        {
+            get
+            {
+                double zoomFactor = Math.Clamp(SettingsService.Current.ZoomLevel, 10.0, 500.0) / 100.0;
+                return Math.Max(2.0, SettingsService.Current.FontSize * zoomFactor);
+            }
+        }
+
         public void UpdateFormattedView()
         {
             if (_isFormattedView)
             {
+                double fontSize = EffectiveFontSize;
                 try
                 {
                     var brush = (Brush)Application.Current.FindResource("MaterialDesignBody");
                     var ff = GetFormattedFontFamily(SettingsService.Current.FontFamilyName);
-                    var doc = MarkdownParserService.ParseToFlowDocument(MainTextBox.Text, ff, SettingsService.Current.FontSize, brush);
+                    var doc = MarkdownParserService.ParseToFlowDocument(MainTextBox.Text, ff, fontSize, brush);
                     FormattedRichTextBox.Document = doc;
                     ApplyDocumentPadding(FormattedRichTextBox.Document);
                     _lastSyncedSyntaxText = MainTextBox.Text;
@@ -269,7 +279,7 @@ namespace NotepadByFerryPot.Controls
                     {
                         PagePadding = EditorPadding,
                         FontFamily = ff,
-                        FontSize = SettingsService.Current.FontSize,
+                        FontSize = fontSize,
                         TextAlignment = TextAlignment.Left
                     };
                     doc.SetResourceReference(FlowDocument.ForegroundProperty, "MaterialDesignBody");

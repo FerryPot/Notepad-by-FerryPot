@@ -319,7 +319,7 @@ namespace NotepadByFerryPot.Controls
                 {
                     int level = 0;
                     while (level < prefix.Length && prefix[level] == '#') level++;
-                    double baseFontSize = SettingsService.Current.FontSize;
+                    double baseFontSize = EffectiveFontSize;
 
                     // If paragraph already has this heading level, toggle back to normal paragraph
                     if (p.Tag is string currentTag && currentTag == "h" + level)
@@ -661,7 +661,7 @@ namespace NotepadByFerryPot.Controls
                     brush = Brushes.Black;
                 }
 
-                var tableBlock = MarkdownParserService.CreateTable(tableLines, SettingsService.Current.FontSize, brush);
+                var tableBlock = MarkdownParserService.CreateTable(tableLines, EffectiveFontSize, brush);
 
                 var caret = FormattedRichTextBox.CaretPosition;
                 Block? targetBlock = null;
@@ -681,7 +681,7 @@ namespace NotepadByFerryPot.Controls
                         cur = LogicalTreeHelper.GetParent(cur);
                 }
 
-                var trailingParagraph = new Paragraph { Margin = new Thickness(0, 0, 0, SettingsService.Current.FontSize * 0.4) };
+                var trailingParagraph = new Paragraph { Margin = new Thickness(0, 0, 0, EffectiveFontSize * 0.4) };
 
                 if (targetBlock != null)
                 {
@@ -764,7 +764,7 @@ namespace NotepadByFerryPot.Controls
                 if (p != null)
                 {
                     p.Tag = null;
-                    p.FontSize = SettingsService.Current.FontSize;
+                    p.FontSize = EffectiveFontSize;
                     p.FontWeight = FontWeights.Normal;
                     p.BorderThickness = new Thickness(0);
                 }
@@ -1081,7 +1081,7 @@ namespace NotepadByFerryPot.Controls
             // In syntax view, adjust editor font size
             var s = SettingsService.Current;
             s.FontSize = Math.Clamp(s.FontSize + delta, 8.0, 72.0);
-            s.ZoomLevel = (s.FontSize / 15.0) * 100.0;
+            SettingsService.Save();
             ApplySettings();
             MainTextBox.Focus();
         }
@@ -1104,12 +1104,12 @@ namespace NotepadByFerryPot.Controls
                 if (isSuper)
                 {
                     FormattedRichTextBox.Selection.ApplyPropertyValue(Inline.BaselineAlignmentProperty, BaselineAlignment.Baseline);
-                    FormattedRichTextBox.Selection.ApplyPropertyValue(TextElement.FontSizeProperty, SettingsService.Current.FontSize);
+                    FormattedRichTextBox.Selection.ApplyPropertyValue(TextElement.FontSizeProperty, EffectiveFontSize);
                 }
                 else
                 {
                     FormattedRichTextBox.Selection.ApplyPropertyValue(Inline.BaselineAlignmentProperty, BaselineAlignment.Superscript);
-                    FormattedRichTextBox.Selection.ApplyPropertyValue(TextElement.FontSizeProperty, Math.Max(8.0, SettingsService.Current.FontSize * 0.75));
+                    FormattedRichTextBox.Selection.ApplyPropertyValue(TextElement.FontSizeProperty, Math.Max(6.0, EffectiveFontSize * 0.75));
                 }
 
                 if (Document != null) Document.IsModified = true;
@@ -1139,12 +1139,12 @@ namespace NotepadByFerryPot.Controls
                 if (isSub)
                 {
                     FormattedRichTextBox.Selection.ApplyPropertyValue(Inline.BaselineAlignmentProperty, BaselineAlignment.Baseline);
-                    FormattedRichTextBox.Selection.ApplyPropertyValue(TextElement.FontSizeProperty, SettingsService.Current.FontSize);
+                    FormattedRichTextBox.Selection.ApplyPropertyValue(TextElement.FontSizeProperty, EffectiveFontSize);
                 }
                 else
                 {
                     FormattedRichTextBox.Selection.ApplyPropertyValue(Inline.BaselineAlignmentProperty, BaselineAlignment.Subscript);
-                    FormattedRichTextBox.Selection.ApplyPropertyValue(TextElement.FontSizeProperty, Math.Max(8.0, SettingsService.Current.FontSize * 0.75));
+                    FormattedRichTextBox.Selection.ApplyPropertyValue(TextElement.FontSizeProperty, Math.Max(6.0, EffectiveFontSize * 0.75));
                 }
 
                 if (Document != null) Document.IsModified = true;

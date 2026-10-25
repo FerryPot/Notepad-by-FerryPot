@@ -16,6 +16,40 @@ namespace NotepadByFerryPot.Controls
         {
             InitializeComponent();
             Loaded += NotepadEditor_Loaded;
+
+            AddHandler(UIElement.ManipulationStartingEvent, new EventHandler<ManipulationStartingEventArgs>(OnManipulationStarting), handledEventsToo: true);
+            AddHandler(UIElement.ManipulationDeltaEvent, new EventHandler<ManipulationDeltaEventArgs>(OnManipulationDelta), handledEventsToo: true);
+        }
+
+        private void OnManipulationStarting(object? sender, ManipulationStartingEventArgs e)
+        {
+            e.ManipulationContainer = this;
+            e.Mode = ManipulationModes.Scale | ManipulationModes.Translate;
+        }
+
+        private void OnManipulationDelta(object? sender, ManipulationDeltaEventArgs e)
+        {
+            // Two-finger pinch zoom (touchscreen)
+            double scale = (e.DeltaManipulation.Scale.X + e.DeltaManipulation.Scale.Y) / 2.0;
+            if (scale > 0 && Math.Abs(scale - 1.0) > 0.0005)
+            {
+                double currentZoom = SettingsService.Current.ZoomLevel;
+                double newZoom = Math.Clamp(currentZoom * scale, 10.0, 500.0);
+
+                if (Math.Abs(newZoom - currentZoom) > 0.01)
+                {
+                    if (Window.GetWindow(this) is MainWindow mw)
+                    {
+                        mw.SetZoomLevel(newZoom, immediateSave: false);
+                    }
+                    else
+                    {
+                        SettingsService.Current.ZoomLevel = newZoom;
+                        ApplySettings();
+                    }
+                }
+                e.Handled = true;
+            }
         }
 
         private void NotepadEditor_Loaded(object sender, RoutedEventArgs e)
@@ -90,10 +124,11 @@ namespace NotepadByFerryPot.Controls
         public void ApplySettings()
         {
             var settings = SettingsService.Current;
+            double effectiveFontSize = EffectiveFontSize;
 
             // Syntax View font (stays monospace unless user chose something else)
             MainTextBox.FontFamily = new FontFamily(settings.FontFamilyName);
-            MainTextBox.FontSize = settings.FontSize;
+            MainTextBox.FontSize = effectiveFontSize;
             MainTextBox.FontWeight = settings.FontWeightName switch
             {
                 "Bold" => FontWeights.Bold,
@@ -101,7 +136,7 @@ namespace NotepadByFerryPot.Controls
                 _ => FontWeights.Normal
             };
             MainTextBox.TextWrapping = settings.WordWrap ? TextWrapping.Wrap : TextWrapping.NoWrap;
-            LineNumbersTextBlock.LineHeight = settings.FontSize * 1.35;
+            LineNumbersTextBlock.LineHeight = effectiveFontSize * 1.35;
 
             LineNumbersColumn.Width = settings.ShowLineNumbers ? GridLength.Auto : new GridLength(0);
             LineNumbersBorder.Visibility = settings.ShowLineNumbers ? Visibility.Visible : Visibility.Collapsed;
@@ -109,7 +144,7 @@ namespace NotepadByFerryPot.Controls
             // Formatted View font (proportional font: Segoe UI or chosen proportional font)
             var formattedFont = GetFormattedFontFamily(settings.FontFamilyName);
             FormattedRichTextBox.FontFamily = formattedFont;
-            FormattedRichTextBox.FontSize = settings.FontSize;
+            FormattedRichTextBox.FontSize = effectiveFontSize;
             FormattedRichTextBox.Padding = EditorPadding;
             MainTextBox.Padding = EditorPadding;
             LineNumbersBorder.Padding = new Thickness(8, EditorPadding.Top, 8, EditorPadding.Bottom);
@@ -117,13 +152,89 @@ namespace NotepadByFerryPot.Controls
             if (FormattedRichTextBox.Document != null)
             {
                 FormattedRichTextBox.Document.FontFamily = formattedFont;
-                FormattedRichTextBox.Document.FontSize = settings.FontSize;
+                FormattedRichTextBox.Document.FontSize = effectiveFontSize;
+                FormattedRichTextBox.Document.LineHeight = effectiveFontSize * 1.5;
                 FormattedRichTextBox.Document.SetResourceReference(FlowDocument.ForegroundProperty, "MaterialDesignBody");
+                foreach (var block in FormattedRichTextBox.Document.Blocks)
+                {
+                    UpdateBlockFontSize(block, effectiveFontSize);
+                }
                 ApplyDocumentPadding(FormattedRichTextBox.Document);
             }
 
             UpdateLineNumbers();
             NotifyFormattingStateChanged();
+        }
+
+        private void UpdateBlockFontSize(Block block, double effectiveFontSize)
+        {
+            if (block is Paragraph p)
+            {
+                if (p.Tag is string tag && tag.Length == 2 && tag[0] == 'h' && int.TryParse(tag.Substring(1), out int level))
+                {
+                    double scale = level switch
+                    {
+                        1 => 1.85,
+                        2 => 1.5,
+                        3 => 1.25,
+                        4 => 1.1,
+                        5 => 1.05,
+                        6 => 1.0,
+                        _ => 1.0
+                    };
+                    p.FontSize = effectiveFontSize * scale;
+                    p.Margin = new Thickness(0, effectiveFontSize * (level == 1 ? 0.6 : 0.4), 0, effectiveFontSize * 0.4);
+                }
+                else
+                {
+                    p.Margin = new Thickness(0, 0, 0, effectiveFontSize * 0.6);
+                    p.LineHeight = effectiveFontSize * 1.45;
+                }
+            }
+            else if (block is System.Windows.Documents.List list)
+            {
+                foreach (var item in list.ListItems)
+                {
+                    foreach (var b in item.Blocks)
+                    {
+                        UpdateBlockFontSize(b, effectiveFontSize);
+                    }
+                }
+            }
+            else if (block is Table table)
+            {
+                foreach (var rg in table.RowGroups)
+                {
+                    foreach (var row in rg.Rows)
+                    {
+                        foreach (var cell in row.Cells)
+                        {
+                            foreach (var b in cell.Blocks)
+                            {
+                                UpdateBlockFontSize(b, effectiveFontSize);
+                            }
+                        }
+                    }
+                }
+            }
+            else if (block is Section section)
+            {
+                foreach (var b in section.Blocks)
+                {
+                    UpdateBlockFontSize(b, effectiveFontSize);
+                }
+            }
+            else if (block is BlockUIContainer buic && buic.Child is FrameworkElement fe)
+            {
+                if (fe is TextBlock tb)
+                {
+                    tb.FontSize = effectiveFontSize * 0.95;
+                }
+                else if (fe is Border border && border.Child is TextBlock btb)
+                {
+                    btb.FontSize = effectiveFontSize * 0.95;
+                }
+            }
         }
 
         private void MainScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)

@@ -56,7 +56,7 @@ namespace NotepadByFerryPot
             WordCharStatusText.Text = $"{_activeDocument.CharacterCount:N0} characters";
             LineEndingStatusText.Text = _activeDocument.LineEnding;
             EncodingStatusText.Text = _activeDocument.EncodingName;
-            ZoomStatusText.Text = $"{(int)SettingsService.Current.ZoomLevel}%";
+            ZoomStatusText.Text = $"{(int)Math.Round(SettingsService.Current.ZoomLevel)}%";
 
             if (ReadOnlyStatusText != null && ReadOnlySeparator != null)
             {

@@ -1,5 +1,6 @@
 using System;
 using System.Windows;
+using System.Windows.Threading;
 using NotepadByFerryPot.Services;
 using NotepadByFerryPot.Views;
 
@@ -39,37 +40,72 @@ namespace NotepadByFerryPot
 
         #region View & Tools
 
+        private DispatcherTimer? _saveZoomDebounceTimer;
+
+        public void SetZoomLevel(double newZoom, bool immediateSave = true)
+        {
+            newZoom = Math.Clamp(newZoom, 10.0, 500.0);
+            if (Math.Abs(SettingsService.Current.ZoomLevel - newZoom) < 0.001) return;
+
+            SettingsService.Current.ZoomLevel = newZoom;
+            ActiveEditor.ApplySettings();
+            UpdateStatusBar();
+
+            if (immediateSave)
+            {
+                _saveZoomDebounceTimer?.Stop();
+                SettingsService.Save();
+            }
+            else
+            {
+                ScheduleSaveZoom();
+            }
+        }
+
+        public void FlushPendingZoomSave()
+        {
+            if (_saveZoomDebounceTimer?.IsEnabled == true)
+            {
+                _saveZoomDebounceTimer.Stop();
+                SettingsService.Save();
+            }
+        }
+
+        private void ScheduleSaveZoom()
+        {
+            if (_saveZoomDebounceTimer == null)
+            {
+                _saveZoomDebounceTimer = new DispatcherTimer
+                {
+                    Interval = TimeSpan.FromMilliseconds(400)
+                };
+                _saveZoomDebounceTimer.Tick += (s, e) =>
+                {
+                    _saveZoomDebounceTimer.Stop();
+                    SettingsService.Save();
+                };
+            }
+            _saveZoomDebounceTimer.Stop();
+            _saveZoomDebounceTimer.Start();
+        }
+
         private void ZoomIn_Click(object sender, RoutedEventArgs e)
         {
-            var s = SettingsService.Current;
-            if (s.FontSize < 40)
-            {
-                s.FontSize += 2;
-                s.ZoomLevel = (s.FontSize / 15.0) * 100.0;
-                ActiveEditor.ApplySettings();
-                UpdateStatusBar();
-            }
+            double current = SettingsService.Current.ZoomLevel;
+            double next = Math.Floor((current + 10.0) / 10.0) * 10.0;
+            SetZoomLevel(next, immediateSave: true);
         }
 
         private void ZoomOut_Click(object sender, RoutedEventArgs e)
         {
-            var s = SettingsService.Current;
-            if (s.FontSize > 10)
-            {
-                s.FontSize -= 2;
-                s.ZoomLevel = (s.FontSize / 15.0) * 100.0;
-                ActiveEditor.ApplySettings();
-                UpdateStatusBar();
-            }
+            double current = SettingsService.Current.ZoomLevel;
+            double next = Math.Ceiling((current - 10.0) / 10.0) * 10.0;
+            SetZoomLevel(next, immediateSave: true);
         }
 
         private void ResetZoom_Click(object sender, RoutedEventArgs e)
         {
-            var s = SettingsService.Current;
-            s.FontSize = 15;
-            s.ZoomLevel = 100.0;
-            ActiveEditor.ApplySettings();
-            UpdateStatusBar();
+            SetZoomLevel(100.0, immediateSave: true);
         }
 
         private void WordWrap_Toggle(object sender, RoutedEventArgs e)

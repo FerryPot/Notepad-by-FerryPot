@@ -281,8 +281,23 @@ namespace NotepadByFerryPot
             }
         }
 
+        private void Window_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+            {
+                e.Handled = true;
+                // Proportional delta: 120 delta = 10% zoom step.
+                // Small deltas from precision touchpads (e.g. 10, 15) produce smooth micro-steps (e.g. 0.8%, 1.25%).
+                double deltaPercent = (e.Delta / 120.0) * 10.0;
+                double newZoom = SettingsService.Current.ZoomLevel + deltaPercent;
+                SetZoomLevel(newZoom, immediateSave: false);
+            }
+        }
+
         private void Window_Closing(object sender, CancelEventArgs e)
         {
+            FlushPendingZoomSave();
+
             // Sync active editor content first
             if (_activeDocument != null && ActiveEditor != null)
             {

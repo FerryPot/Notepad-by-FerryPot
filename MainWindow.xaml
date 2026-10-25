@@ -11,6 +11,7 @@
         AllowDrop="True"
         Drop="Window_Drop"
         PreviewKeyDown="Window_PreviewKeyDown"
+        PreviewMouseWheel="Window_PreviewMouseWheel"
         Closing="Window_Closing"
         Background="{DynamicResource MaterialDesignPaper}"
         TextElement.Foreground="{DynamicResource MaterialDesignBody}">
