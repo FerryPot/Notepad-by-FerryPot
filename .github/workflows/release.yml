@@ -16,6 +16,20 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify tag is on main branch
+        id: check_main
+        shell: pwsh
+        run: |
+          git fetch origin main
+          git merge-base --is-ancestor HEAD origin/main
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Release aborted: Tag ${{ github.ref_name }} is not on main branch."
+            exit 1
+          }
+          Write-Host "Tag ${{ github.ref_name }} is verified on main branch."
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -23,7 +37,7 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Publish single-file executable
-        run: dotnet publish NotepadByFerryPot.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o ./Publish
+        run: dotnet publish NotepadByFerryPot.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:BuildChannel=Stable -o ./Publish
 
       - name: Create ZIP archive
         shell: pwsh
@@ -35,3 +49,4 @@ jobs:
         with:
           files: NotepadByFerryPot-${{ github.ref_name }}-win-x64.zip
           generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}

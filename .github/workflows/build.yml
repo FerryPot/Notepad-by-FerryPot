@@ -2,13 +2,13 @@ name: Build
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "features", "ai-features" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "features", "ai-features" ]
 
 jobs:
   build:
-    name: Build & Security Audit
+    name: Build & Package Artifact
     runs-on: windows-latest
 
     steps:
@@ -20,11 +20,47 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Determine Branch & Channel Configuration
+        id: channel_config
+        shell: pwsh
+        run: |
+          $branch = "${{ github.head_ref }}"
+          if (-not $branch) {
+            $branch = "${{ github.ref_name }}"
+          }
+          if ($branch -eq "ai-features") {
+            $channel = "AI"
+            $exe = "NotepadByFerryPot-ai.exe"
+            $artifact = "ai-features"
+          } elseif ($branch -eq "features") {
+            $channel = "Features"
+            $exe = "NotepadByFerryPot-features.exe"
+            $artifact = "features"
+          } else {
+            $channel = "Stable"
+            $exe = "NotepadByFerryPot.exe"
+            $artifact = "main"
+          }
+          Write-Output "channel=$channel" >> $env:GITHUB_OUTPUT
+          Write-Output "exe=$exe" >> $env:GITHUB_OUTPUT
+          Write-Output "artifact=$artifact" >> $env:GITHUB_OUTPUT
+          Write-Host "Target branch: $branch, Channel: $channel, Exe: $exe, Artifact: $artifact"
+
       - name: Restore dependencies
         run: dotnet restore
 
       - name: Build in Release
-        run: dotnet build -c Release
+        run: dotnet build -c Release -p:BuildChannel=${{ steps.channel_config.outputs.channel }}
 
       - name: Check for vulnerable packages
         run: dotnet list package --vulnerable --include-transitive
+
+      - name: Publish single-file executable
+        run: dotnet publish NotepadByFerryPot.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:BuildChannel=${{ steps.channel_config.outputs.channel }} -o ./Publish
+
+      - name: Upload executable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.channel_config.outputs.artifact }}
+          path: ./Publish/${{ steps.channel_config.outputs.exe }}
+          if-no-files-found: error

@@ -158,7 +158,7 @@ namespace NotepadByFerryPot.Services
     {
         private static readonly string SettingsDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "NotepadByFerryPot"
+            BuildInfo.AppDataFolderName
         );
         private static readonly string SettingsFilePath = Path.Combine(SettingsDir, "settings.json");
 

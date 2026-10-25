@@ -6,7 +6,6 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <AssemblyName>NotepadByFerryPot</AssemblyName>
     <RootNamespace>NotepadByFerryPot</RootNamespace>
     <ApplicationTitle>Notepad by FerryPot</ApplicationTitle>
     <Product>Notepad by FerryPot</Product>
@@ -16,6 +15,29 @@
     <SelfContained>false</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <VersionPrefix>1.0.0</VersionPrefix>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <BuildChannel Condition="'$(BuildChannel)' == ''">Stable</BuildChannel>
+  </PropertyGroup>
+
+  <!-- Channel-specific settings -->
+  <PropertyGroup Condition="'$(BuildChannel)' == 'Features' Or '$(BuildChannel)' == 'features'">
+    <AssemblyName>NotepadByFerryPot-features</AssemblyName>
+    <DefineConstants>$(DefineConstants);CHANNEL_FEATURES</DefineConstants>
+    <VersionSuffix>features</VersionSuffix>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(BuildChannel)' == 'AI' Or '$(BuildChannel)' == 'ai' Or '$(BuildChannel)' == 'Ai'">
+    <AssemblyName>NotepadByFerryPot-ai</AssemblyName>
+    <DefineConstants>$(DefineConstants);CHANNEL_AI</DefineConstants>
+    <VersionSuffix>ai</VersionSuffix>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(BuildChannel)' != 'Features' And '$(BuildChannel)' != 'features' And '$(BuildChannel)' != 'AI' And '$(BuildChannel)' != 'ai' And '$(BuildChannel)' != 'Ai'">
+    <AssemblyName>NotepadByFerryPot</AssemblyName>
+    <DefineConstants>$(DefineConstants);CHANNEL_STABLE</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>

@@ -8,7 +8,7 @@ namespace NotepadByFerryPot.Services
     {
         public static string LogsDirectory => Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "NotepadByFerryPot",
+            BuildInfo.AppDataFolderName,
             "logs"
         );
 
