@@ -14,6 +14,78 @@ namespace NotepadByFerryPot.Services
     public static class MarkdownParserService
     {
         private static readonly Regex HexColorRegex = new Regex(@"^#([0-9a-fA-F]{6})$", RegexOptions.Compiled, TimeSpan.FromSeconds(1));
+        private static readonly Regex TableSplitRegex = new Regex(@"(?<!\\)\|", RegexOptions.Compiled, TimeSpan.FromSeconds(1));
+        private static readonly Regex TableSepCellRegex = new Regex(@"^\s*:?-+:?\s*$", RegexOptions.Compiled, TimeSpan.FromSeconds(1));
+
+        public static List<string> SplitTableRow(string line)
+        {
+            string trimmed = line.Trim();
+            if (trimmed.StartsWith("|")) trimmed = trimmed.Substring(1);
+            if (trimmed.EndsWith("|")) trimmed = trimmed.Substring(0, trimmed.Length - 1);
+
+            string[] parts;
+            try
+            {
+                parts = TableSplitRegex.Split(trimmed);
+            }
+            catch (RegexMatchTimeoutException)
+            {
+                parts = trimmed.Split('|');
+            }
+
+            var result = new List<string>(parts.Length);
+            foreach (var part in parts)
+            {
+                string unescaped = part.Replace(@"\|", "|");
+                result.Add(unescaped.Trim());
+            }
+            return result;
+        }
+
+        public static bool IsTableSeparator(string line, out List<TextAlignment> alignments)
+        {
+            alignments = new List<TextAlignment>();
+            string trimmed = line.Trim();
+            if (!trimmed.StartsWith("|") || !trimmed.EndsWith("|")) return false;
+
+            var cells = SplitTableRow(trimmed);
+            if (cells.Count == 0) return false;
+
+            foreach (var cell in cells)
+            {
+                string c = cell.Trim();
+                if (string.IsNullOrEmpty(c)) return false;
+
+                bool match = false;
+                try
+                {
+                    match = TableSepCellRegex.IsMatch(c);
+                }
+                catch (RegexMatchTimeoutException)
+                {
+                    match = c.Replace("-", "").Replace(":", "").Length == 0 && c.Contains("-");
+                }
+
+                if (!match) return false;
+
+                bool startColon = c.StartsWith(":");
+                bool endColon = c.EndsWith(":");
+                if (startColon && endColon)
+                {
+                    alignments.Add(TextAlignment.Center);
+                }
+                else if (endColon)
+                {
+                    alignments.Add(TextAlignment.Right);
+                }
+                else
+                {
+                    alignments.Add(TextAlignment.Left);
+                }
+            }
+
+            return true;
+        }
 
         public static bool IsValidHexColor(string? hex)
         {
@@ -153,19 +225,24 @@ namespace NotepadByFerryPot.Services
                         tableLines.Add(lines[i].Trim());
                         i++;
                     }
-                    if (tableLines.Count >= 2 && tableLines[1].Contains("-"))
+                    if (tableLines.Count >= 2 && IsTableSeparator(tableLines[1], out _))
                     {
-                        doc.Blocks.Add(CreateTable(tableLines, baseFontSize, foreground));
-                        continue;
-                    }
-                    else
-                    {
-                        foreach (var tLine in tableLines)
+                        try
                         {
-                            doc.Blocks.Add(CreateParagraph(tLine, baseFontSize, foreground));
+                            doc.Blocks.Add(CreateTable(tableLines, baseFontSize, foreground));
+                            continue;
                         }
-                        continue;
+                        catch
+                        {
+                            // Safe fallback to plain paragraphs if table creation fails
+                        }
                     }
+
+                    foreach (var tLine in tableLines)
+                    {
+                        doc.Blocks.Add(CreateParagraph(tLine, baseFontSize, foreground));
+                    }
+                    continue;
                 }
 
                 // 6. Lists (- , * , + , 1. , - [ ] )
@@ -350,6 +427,25 @@ namespace NotepadByFerryPot.Services
                 }
                 else if (block is Table table)
                 {
+                    var colAlignments = new List<TextAlignment>();
+                    for (int c = 0; c < table.Columns.Count; c++)
+                    {
+                        var col = table.Columns[c];
+                        if (col.Tag is string aStr && Enum.TryParse<TextAlignment>(aStr, out var ta))
+                        {
+                            colAlignments.Add(ta);
+                        }
+                        else
+                        {
+                            TextAlignment fallbackAlign = TextAlignment.Left;
+                            if (table.RowGroups.Count > 0 && table.RowGroups[0].Rows.Count > 0 && c < table.RowGroups[0].Rows[0].Cells.Count)
+                            {
+                                fallbackAlign = table.RowGroups[0].Rows[0].Cells[c].TextAlignment;
+                            }
+                            colAlignments.Add(fallbackAlign);
+                        }
+                    }
+
                     foreach (var group in table.RowGroups)
                     {
                         for (int r = 0; r < group.Rows.Count; r++)
@@ -363,14 +459,39 @@ namespace NotepadByFerryPot.Services
                                 {
                                     if (b is Paragraph cp) cellText += InlinesToMarkdown(cp.Inlines);
                                 }
-                                cellTexts.Add(cellText.Trim());
+                                // Escape pipe character in markdown table content so structure is preserved
+                                cellText = cellText.Replace(@"\|", "|").Replace("|", @"\|").Trim();
+                                cellTexts.Add(cellText);
                             }
+
+                            while (cellTexts.Count < colAlignments.Count)
+                            {
+                                cellTexts.Add("");
+                            }
+
                             sb.AppendLine("| " + string.Join(" | ", cellTexts) + " |");
 
                             if (r == 0)
                             {
                                 var seps = new List<string>();
-                                for (int c = 0; c < row.Cells.Count; c++) seps.Add("---");
+                                int numCols = Math.Max(cellTexts.Count, colAlignments.Count);
+                                for (int c = 0; c < numCols; c++)
+                                {
+                                    var align = c < colAlignments.Count ? colAlignments[c] : TextAlignment.Left;
+                                    switch (align)
+                                    {
+                                        case TextAlignment.Center:
+                                            seps.Add(":---:");
+                                            break;
+                                        case TextAlignment.Right:
+                                            seps.Add("---:");
+                                            break;
+                                        case TextAlignment.Left:
+                                        default:
+                                            seps.Add(":---");
+                                            break;
+                                    }
+                                }
                                 sb.AppendLine("| " + string.Join(" | ", seps) + " |");
                             }
                         }
@@ -761,6 +882,143 @@ namespace NotepadByFerryPot.Services
             }
         }
 
+        public static Brush GetTableBorderBrush()
+        {
+            try
+            {
+                if (Application.Current?.TryFindResource("MaterialDesignDivider") is Brush b)
+                    return b;
+            }
+            catch { }
+            return new SolidColorBrush(Color.FromArgb(50, 128, 128, 128));
+        }
+
+        public static Brush GetTableHeaderBackground()
+        {
+            var b = new SolidColorBrush(Color.FromArgb(24, 128, 128, 128));
+            b.Freeze();
+            return b;
+        }
+
+        public static Brush GetTableZebraBackground()
+        {
+            var b = new SolidColorBrush(Color.FromArgb(12, 128, 128, 128));
+            b.Freeze();
+            return b;
+        }
+
+        public static void ApplyTablePreset(Table table, string presetName, bool? hasHeader = null)
+        {
+            if (table == null || table.RowGroups.Count == 0) return;
+
+            string currentPreset = "grid";
+            bool currentHeader = true;
+
+            if (table.Tag is string tagStr)
+            {
+                if (tagStr.Contains("preset:zebra")) currentPreset = "zebra";
+                else if (tagStr.Contains("preset:minimal")) currentPreset = "minimal";
+                else if (tagStr.Contains("preset:grid")) currentPreset = "grid";
+
+                if (tagStr.Contains("header:false")) currentHeader = false;
+                else if (tagStr.Contains("header:true")) currentHeader = true;
+            }
+
+            if (!string.IsNullOrEmpty(presetName))
+            {
+                currentPreset = presetName.ToLowerInvariant();
+            }
+            if (hasHeader.HasValue)
+            {
+                currentHeader = hasHeader.Value;
+            }
+
+            table.Tag = $"preset:{currentPreset};header:{currentHeader.ToString().ToLowerInvariant()}";
+
+            var borderBrush = GetTableBorderBrush();
+            var headerBg = GetTableHeaderBackground();
+            var zebraBg = GetTableZebraBackground();
+            var padding = new Thickness(14, 8, 14, 8);
+
+            if (currentPreset == "minimal")
+            {
+                table.BorderBrush = borderBrush;
+                table.BorderThickness = new Thickness(0, 1, 0, 1);
+            }
+            else
+            {
+                table.BorderBrush = borderBrush;
+                table.BorderThickness = new Thickness(1, 1, 0, 0);
+            }
+
+            var rowGroup = table.RowGroups[0];
+            int totalRows = rowGroup.Rows.Count;
+
+            for (int r = 0; r < totalRows; r++)
+            {
+                var row = rowGroup.Rows[r];
+                bool isHeader = (r == 0 && currentHeader);
+
+                if (isHeader)
+                {
+                    row.Background = headerBg;
+                }
+                else if (currentPreset == "zebra" && (r % 2 == 1))
+                {
+                    row.Background = zebraBg;
+                }
+                else
+                {
+                    row.Background = Brushes.Transparent;
+                }
+
+                for (int c = 0; c < row.Cells.Count; c++)
+                {
+                    var cell = row.Cells[c];
+                    cell.Padding = padding;
+                    cell.BorderBrush = borderBrush;
+
+                    if (isHeader)
+                    {
+                        foreach (var b in cell.Blocks)
+                        {
+                            if (b is Paragraph p) p.FontWeight = FontWeights.Bold;
+                        }
+
+                        if (currentPreset == "minimal")
+                        {
+                            cell.BorderThickness = new Thickness(0, 0, 0, 2);
+                        }
+                        else
+                        {
+                            cell.BorderThickness = new Thickness(0, 0, 1, 1);
+                        }
+                    }
+                    else
+                    {
+                        if (r == 0)
+                        {
+                            foreach (var b in cell.Blocks)
+                            {
+                                if (b is Paragraph p) p.FontWeight = FontWeights.Normal;
+                            }
+                        }
+
+                        if (currentPreset == "minimal")
+                        {
+                            cell.BorderThickness = (r == totalRows - 1)
+                                ? new Thickness(0, 0, 0, 0)
+                                : new Thickness(0, 0, 0, 1);
+                        }
+                        else
+                        {
+                            cell.BorderThickness = new Thickness(0, 0, 1, 1);
+                        }
+                    }
+                }
+            }
+        }
+
         public static Block CreateTable(List<string> tableLines, double baseFontSize, Brush foreground)
         {
             var table = new Table
@@ -769,73 +1027,64 @@ namespace NotepadByFerryPot.Services
                 Margin = new Thickness(0, 10, 0, 14)
             };
 
-            try
-            {
-                table.BorderBrush = (Brush)Application.Current.FindResource("MaterialDesignDivider");
-                table.BorderThickness = new Thickness(1);
-            }
-            catch { }
-
             var rowGroup = new TableRowGroup();
             table.RowGroups.Add(rowGroup);
 
-            var headerCells = tableLines[0].Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
-            int colCount = headerCells.Length;
+            var headerCells = SplitTableRow(tableLines[0]);
+            List<TextAlignment> alignments = new List<TextAlignment>();
+            if (tableLines.Count >= 2)
+            {
+                IsTableSeparator(tableLines[1], out alignments);
+            }
+
+            int colCount = Math.Max(headerCells.Count, alignments.Count);
+            if (colCount == 0) colCount = 1;
 
             for (int c = 0; c < colCount; c++)
             {
-                table.Columns.Add(new TableColumn());
+                var col = new TableColumn();
+                var align = c < alignments.Count ? alignments[c] : TextAlignment.Left;
+                col.Tag = align.ToString();
+                table.Columns.Add(col);
             }
 
             var headerRow = new TableRow();
-            try
+            for (int c = 0; c < colCount; c++)
             {
-                headerRow.Background = (Brush)Application.Current.FindResource("MaterialDesignCardBackground");
-            }
-            catch { }
-
-            foreach (var h in headerCells)
-            {
-                var p = new Paragraph { FontWeight = FontWeights.Bold, Margin = new Thickness(0) };
-                AddFormattedInlines(p, h.Trim(), foreground);
+                string content = c < headerCells.Count ? headerCells[c] : "";
+                var align = c < alignments.Count ? alignments[c] : TextAlignment.Left;
+                var p = new Paragraph { FontWeight = FontWeights.Bold, Margin = new Thickness(0), TextAlignment = align };
+                AddFormattedInlines(p, content, foreground);
                 var cell = new TableCell(p)
                 {
-                    Padding = new Thickness(12, 8, 12, 8)
+                    Padding = new Thickness(14, 8, 14, 8),
+                    TextAlignment = align
                 };
-                try
-                {
-                    cell.BorderBrush = (Brush)Application.Current.FindResource("MaterialDesignDivider");
-                    cell.BorderThickness = new Thickness(0, 0, 1, 1);
-                }
-                catch { }
                 headerRow.Cells.Add(cell);
             }
             rowGroup.Rows.Add(headerRow);
 
             for (int r = 2; r < tableLines.Count; r++)
             {
-                var rowCells = tableLines[r].Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
+                var rowCells = SplitTableRow(tableLines[r]);
                 var row = new TableRow();
                 for (int c = 0; c < colCount; c++)
                 {
-                    string content = c < rowCells.Length ? rowCells[c].Trim() : "";
-                    var p = new Paragraph { Margin = new Thickness(0) };
+                    string content = c < rowCells.Count ? rowCells[c] : "";
+                    var align = c < alignments.Count ? alignments[c] : TextAlignment.Left;
+                    var p = new Paragraph { Margin = new Thickness(0), TextAlignment = align };
                     AddFormattedInlines(p, content, foreground);
                     var cell = new TableCell(p)
                     {
-                        Padding = new Thickness(12, 6, 12, 6)
+                        Padding = new Thickness(14, 8, 14, 8),
+                        TextAlignment = align
                     };
-                    try
-                    {
-                        cell.BorderBrush = (Brush)Application.Current.FindResource("MaterialDesignDivider");
-                        cell.BorderThickness = new Thickness(0, 0, 1, 1);
-                    }
-                    catch { }
                     row.Cells.Add(cell);
                 }
                 rowGroup.Rows.Add(row);
             }
 
+            ApplyTablePreset(table, "grid", hasHeader: true);
             return table;
         }
 

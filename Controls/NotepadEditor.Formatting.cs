@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Documents;
+using System.Windows.Input;
 using System.Windows.Media;
 using NotepadByFerryPot.Services;
 
@@ -1154,6 +1156,567 @@ namespace NotepadByFerryPot.Controls
             }
 
             ToggleWrap("<sub>", "</sub>");
+        }
+
+        #endregion
+
+        #region Table Operations
+
+        public static TableCell? GetContainingCell(TextPointer? pointer)
+        {
+            if (pointer == null) return null;
+            DependencyObject? cur = pointer.Paragraph ?? (DependencyObject?)pointer.Parent;
+            while (cur != null)
+            {
+                if (cur is TableCell cell) return cell;
+                if (cur is FrameworkContentElement fce) cur = fce.Parent;
+                else if (cur is FrameworkElement fe) cur = fe.Parent;
+                else cur = LogicalTreeHelper.GetParent(cur);
+            }
+            return null;
+        }
+
+        public static TableRow? GetContainingRow(TableCell? cell)
+        {
+            if (cell == null) return null;
+            DependencyObject? cur = cell.Parent;
+            while (cur != null)
+            {
+                if (cur is TableRow row) return row;
+                if (cur is FrameworkContentElement fce) cur = fce.Parent;
+                else if (cur is FrameworkElement fe) cur = fe.Parent;
+                else cur = LogicalTreeHelper.GetParent(cur);
+            }
+            return null;
+        }
+
+        public static TableRowGroup? GetContainingRowGroup(TableRow? row)
+        {
+            if (row == null) return null;
+            DependencyObject? cur = row.Parent;
+            while (cur != null)
+            {
+                if (cur is TableRowGroup rg) return rg;
+                if (cur is FrameworkContentElement fce) cur = fce.Parent;
+                else if (cur is FrameworkElement fe) cur = fe.Parent;
+                else cur = LogicalTreeHelper.GetParent(cur);
+            }
+            return null;
+        }
+
+        public static Table? GetContainingTable(TableCell? cell)
+        {
+            if (cell == null) return null;
+            DependencyObject? cur = cell.Parent;
+            while (cur != null)
+            {
+                if (cur is Table table) return table;
+                if (cur is FrameworkContentElement fce) cur = fce.Parent;
+                else if (cur is FrameworkElement fe) cur = fe.Parent;
+                else cur = LogicalTreeHelper.GetParent(cur);
+            }
+            return null;
+        }
+
+        public TableCell? GetCurrentTableCell()
+        {
+            if (!_isFormattedView) return null;
+            return GetContainingCell(FormattedRichTextBox.CaretPosition);
+        }
+
+        public Table? GetCurrentTable()
+        {
+            var cell = GetCurrentTableCell();
+            return cell != null ? GetContainingTable(cell) : null;
+        }
+
+        public bool IsInsideTable()
+        {
+            return _isFormattedView && GetCurrentTableCell() != null;
+        }
+
+        public string GetCurrentTablePreset()
+        {
+            var table = GetCurrentTable();
+            if (table?.Tag is string tag)
+            {
+                if (tag.Contains("preset:zebra")) return "zebra";
+                if (tag.Contains("preset:minimal")) return "minimal";
+            }
+            return "grid";
+        }
+
+        public bool GetCurrentTableHeaderState()
+        {
+            var table = GetCurrentTable();
+            if (table?.Tag is string tag)
+            {
+                if (tag.Contains("header:false")) return false;
+            }
+            return true;
+        }
+
+        public TextAlignment GetCurrentColumnAlignment()
+        {
+            var cell = GetCurrentTableCell();
+            if (cell == null) return TextAlignment.Left;
+            var row = GetContainingRow(cell);
+            var table = GetContainingTable(cell);
+            if (row != null && table != null)
+            {
+                int colIdx = row.Cells.IndexOf(cell);
+                if (colIdx >= 0 && colIdx < table.Columns.Count && table.Columns[colIdx].Tag is string aStr && Enum.TryParse<TextAlignment>(aStr, out var ta))
+                {
+                    return ta;
+                }
+            }
+            return cell.TextAlignment;
+        }
+
+        public void InsertRowAbove(TableCell? cell = null)
+        {
+            if (Document != null && Document.IsReadOnly) return;
+            cell ??= GetCurrentTableCell();
+            if (cell == null) return;
+
+            var row = GetContainingRow(cell);
+            var rowGroup = GetContainingRowGroup(row);
+            var table = GetContainingTable(cell);
+            if (row == null || rowGroup == null || table == null) return;
+
+            int rowIdx = rowGroup.Rows.IndexOf(row);
+            int colCount = Math.Max(table.Columns.Count, row.Cells.Count);
+
+            var newRow = new TableRow();
+            for (int c = 0; c < colCount; c++)
+            {
+                var align = TextAlignment.Left;
+                if (c < table.Columns.Count && table.Columns[c].Tag is string aStr && Enum.TryParse<TextAlignment>(aStr, out var ta))
+                {
+                    align = ta;
+                }
+                var p = new Paragraph { Margin = new Thickness(0), TextAlignment = align };
+                var newCell = new TableCell(p)
+                {
+                    Padding = new Thickness(14, 8, 14, 8),
+                    TextAlignment = align
+                };
+                newRow.Cells.Add(newCell);
+            }
+
+            rowGroup.Rows.Insert(rowIdx, newRow);
+            MarkdownParserService.ApplyTablePreset(table, GetCurrentTablePreset(), GetCurrentTableHeaderState());
+
+            if (newRow.Cells[0].Blocks.FirstBlock != null)
+            {
+                FormattedRichTextBox.CaretPosition = newRow.Cells[0].Blocks.FirstBlock.ContentStart;
+            }
+            if (Document != null) Document.IsModified = true;
+            FormattedRichTextBox.Focus();
+        }
+
+        public TableRow? InsertRowBelow(TableCell? cell = null)
+        {
+            if (Document != null && Document.IsReadOnly) return null;
+            cell ??= GetCurrentTableCell();
+            if (cell == null) return null;
+
+            var row = GetContainingRow(cell);
+            var rowGroup = GetContainingRowGroup(row);
+            var table = GetContainingTable(cell);
+            if (row == null || rowGroup == null || table == null) return null;
+
+            int rowIdx = rowGroup.Rows.IndexOf(row);
+            int colCount = Math.Max(table.Columns.Count, row.Cells.Count);
+
+            var newRow = new TableRow();
+            for (int c = 0; c < colCount; c++)
+            {
+                var align = TextAlignment.Left;
+                if (c < table.Columns.Count && table.Columns[c].Tag is string aStr && Enum.TryParse<TextAlignment>(aStr, out var ta))
+                {
+                    align = ta;
+                }
+                var p = new Paragraph { Margin = new Thickness(0), TextAlignment = align };
+                var newCell = new TableCell(p)
+                {
+                    Padding = new Thickness(14, 8, 14, 8),
+                    TextAlignment = align
+                };
+                newRow.Cells.Add(newCell);
+            }
+
+            rowGroup.Rows.Insert(rowIdx + 1, newRow);
+            MarkdownParserService.ApplyTablePreset(table, GetCurrentTablePreset(), GetCurrentTableHeaderState());
+
+            if (newRow.Cells[0].Blocks.FirstBlock != null)
+            {
+                FormattedRichTextBox.CaretPosition = newRow.Cells[0].Blocks.FirstBlock.ContentStart;
+            }
+            if (Document != null) Document.IsModified = true;
+            FormattedRichTextBox.Focus();
+            return newRow;
+        }
+
+        public void DeleteRow(TableCell? cell = null)
+        {
+            if (Document != null && Document.IsReadOnly) return;
+            cell ??= GetCurrentTableCell();
+            if (cell == null) return;
+
+            var row = GetContainingRow(cell);
+            var rowGroup = GetContainingRowGroup(row);
+            var table = GetContainingTable(cell);
+            if (row == null || rowGroup == null || table == null) return;
+
+            if (rowGroup.Rows.Count <= 1)
+            {
+                DeleteTable(table);
+                return;
+            }
+
+            int rowIdx = rowGroup.Rows.IndexOf(row);
+            rowGroup.Rows.Remove(row);
+            MarkdownParserService.ApplyTablePreset(table, GetCurrentTablePreset(), GetCurrentTableHeaderState());
+
+            int targetRowIdx = Math.Min(rowIdx, rowGroup.Rows.Count - 1);
+            if (rowGroup.Rows[targetRowIdx].Cells.Count > 0 && rowGroup.Rows[targetRowIdx].Cells[0].Blocks.FirstBlock != null)
+            {
+                FormattedRichTextBox.CaretPosition = rowGroup.Rows[targetRowIdx].Cells[0].Blocks.FirstBlock.ContentStart;
+            }
+            if (Document != null) Document.IsModified = true;
+            FormattedRichTextBox.Focus();
+        }
+
+        public void InsertColumnLeft(TableCell? cell = null)
+        {
+            if (Document != null && Document.IsReadOnly) return;
+            cell ??= GetCurrentTableCell();
+            if (cell == null) return;
+
+            var row = GetContainingRow(cell);
+            var rowGroup = GetContainingRowGroup(row);
+            var table = GetContainingTable(cell);
+            if (row == null || rowGroup == null || table == null) return;
+
+            int colIdx = row.Cells.IndexOf(cell);
+            if (colIdx < 0) colIdx = 0;
+
+            var newCol = new TableColumn { Tag = TextAlignment.Left.ToString() };
+            if (colIdx <= table.Columns.Count)
+            {
+                table.Columns.Insert(colIdx, newCol);
+            }
+            else
+            {
+                table.Columns.Add(newCol);
+            }
+
+            foreach (var r in rowGroup.Rows)
+            {
+                var p = new Paragraph { Margin = new Thickness(0), TextAlignment = TextAlignment.Left };
+                var newCell = new TableCell(p) { Padding = new Thickness(14, 8, 14, 8), TextAlignment = TextAlignment.Left };
+                if (colIdx <= r.Cells.Count)
+                {
+                    r.Cells.Insert(colIdx, newCell);
+                }
+                else
+                {
+                    r.Cells.Add(newCell);
+                }
+            }
+
+            MarkdownParserService.ApplyTablePreset(table, GetCurrentTablePreset(), GetCurrentTableHeaderState());
+            if (row.Cells[colIdx].Blocks.FirstBlock != null)
+            {
+                FormattedRichTextBox.CaretPosition = row.Cells[colIdx].Blocks.FirstBlock.ContentStart;
+            }
+            if (Document != null) Document.IsModified = true;
+            FormattedRichTextBox.Focus();
+        }
+
+        public void InsertColumnRight(TableCell? cell = null)
+        {
+            if (Document != null && Document.IsReadOnly) return;
+            cell ??= GetCurrentTableCell();
+            if (cell == null) return;
+
+            var row = GetContainingRow(cell);
+            var rowGroup = GetContainingRowGroup(row);
+            var table = GetContainingTable(cell);
+            if (row == null || rowGroup == null || table == null) return;
+
+            int colIdx = row.Cells.IndexOf(cell);
+            int targetIdx = colIdx >= 0 ? colIdx + 1 : row.Cells.Count;
+
+            var newCol = new TableColumn { Tag = TextAlignment.Left.ToString() };
+            if (targetIdx <= table.Columns.Count)
+            {
+                table.Columns.Insert(targetIdx, newCol);
+            }
+            else
+            {
+                table.Columns.Add(newCol);
+            }
+
+            foreach (var r in rowGroup.Rows)
+            {
+                var p = new Paragraph { Margin = new Thickness(0), TextAlignment = TextAlignment.Left };
+                var newCell = new TableCell(p) { Padding = new Thickness(14, 8, 14, 8), TextAlignment = TextAlignment.Left };
+                if (targetIdx <= r.Cells.Count)
+                {
+                    r.Cells.Insert(targetIdx, newCell);
+                }
+                else
+                {
+                    r.Cells.Add(newCell);
+                }
+            }
+
+            MarkdownParserService.ApplyTablePreset(table, GetCurrentTablePreset(), GetCurrentTableHeaderState());
+            if (row.Cells[targetIdx].Blocks.FirstBlock != null)
+            {
+                FormattedRichTextBox.CaretPosition = row.Cells[targetIdx].Blocks.FirstBlock.ContentStart;
+            }
+            if (Document != null) Document.IsModified = true;
+            FormattedRichTextBox.Focus();
+        }
+
+        public void DeleteColumn(TableCell? cell = null)
+        {
+            if (Document != null && Document.IsReadOnly) return;
+            cell ??= GetCurrentTableCell();
+            if (cell == null) return;
+
+            var row = GetContainingRow(cell);
+            var rowGroup = GetContainingRowGroup(row);
+            var table = GetContainingTable(cell);
+            if (row == null || rowGroup == null || table == null) return;
+
+            int colIdx = row.Cells.IndexOf(cell);
+            if (colIdx < 0) return;
+
+            if (row.Cells.Count <= 1 || table.Columns.Count <= 1)
+            {
+                DeleteTable(table);
+                return;
+            }
+
+            if (colIdx < table.Columns.Count)
+            {
+                table.Columns.RemoveAt(colIdx);
+            }
+
+            foreach (var r in rowGroup.Rows)
+            {
+                if (colIdx < r.Cells.Count)
+                {
+                    r.Cells.RemoveAt(colIdx);
+                }
+            }
+
+            MarkdownParserService.ApplyTablePreset(table, GetCurrentTablePreset(), GetCurrentTableHeaderState());
+            int targetIdx = Math.Min(colIdx, row.Cells.Count - 1);
+            if (targetIdx >= 0 && row.Cells[targetIdx].Blocks.FirstBlock != null)
+            {
+                FormattedRichTextBox.CaretPosition = row.Cells[targetIdx].Blocks.FirstBlock.ContentStart;
+            }
+            if (Document != null) Document.IsModified = true;
+            FormattedRichTextBox.Focus();
+        }
+
+        public void DeleteTable(Table? table = null)
+        {
+            if (Document != null && Document.IsReadOnly) return;
+            table ??= GetCurrentTable();
+            if (table == null) return;
+
+            Block? adjacentBlock = null;
+            var doc = FormattedRichTextBox.Document;
+            if (doc != null && doc.Blocks.Contains(table))
+            {
+                var cur = doc.Blocks.FirstBlock;
+                while (cur != null)
+                {
+                    if (cur == table)
+                    {
+                        adjacentBlock = cur.NextBlock ?? cur.PreviousBlock;
+                        break;
+                    }
+                    cur = cur.NextBlock;
+                }
+                doc.Blocks.Remove(table);
+
+                if (doc.Blocks.Count == 0)
+                {
+                    var p = new Paragraph { Margin = new Thickness(0) };
+                    doc.Blocks.Add(p);
+                    FormattedRichTextBox.CaretPosition = p.ContentStart;
+                }
+                else if (adjacentBlock != null)
+                {
+                    FormattedRichTextBox.CaretPosition = adjacentBlock.ContentStart;
+                }
+            }
+
+            if (Document != null) Document.IsModified = true;
+            FormattedRichTextBox.Focus();
+        }
+
+        public void ToggleHeaderRow(Table? table = null)
+        {
+            if (Document != null && Document.IsReadOnly) return;
+            table ??= GetCurrentTable();
+            if (table == null) return;
+
+            bool currentHeader = true;
+            string preset = "grid";
+            if (table.Tag is string tag)
+            {
+                if (tag.Contains("header:false")) currentHeader = false;
+                if (tag.Contains("preset:zebra")) preset = "zebra";
+                else if (tag.Contains("preset:minimal")) preset = "minimal";
+            }
+
+            bool newHeader = !currentHeader;
+            MarkdownParserService.ApplyTablePreset(table, preset, newHeader);
+            if (Document != null) Document.IsModified = true;
+            FormattedRichTextBox.Focus();
+        }
+
+        public void SetColumnAlignment(TextAlignment alignment, TableCell? cell = null)
+        {
+            if (Document != null && Document.IsReadOnly) return;
+            cell ??= GetCurrentTableCell();
+            if (cell == null) return;
+
+            var row = GetContainingRow(cell);
+            var rowGroup = GetContainingRowGroup(row);
+            var table = GetContainingTable(cell);
+            if (row == null || rowGroup == null || table == null) return;
+
+            int colIdx = row.Cells.IndexOf(cell);
+            if (colIdx < 0) return;
+
+            if (colIdx < table.Columns.Count)
+            {
+                table.Columns[colIdx].Tag = alignment.ToString();
+            }
+
+            foreach (var r in rowGroup.Rows)
+            {
+                if (colIdx < r.Cells.Count)
+                {
+                    var c = r.Cells[colIdx];
+                    c.TextAlignment = alignment;
+                    foreach (var b in c.Blocks)
+                    {
+                        b.TextAlignment = alignment;
+                    }
+                }
+            }
+
+            if (Document != null) Document.IsModified = true;
+            FormattedRichTextBox.Focus();
+        }
+
+        public void SetTablePreset(string presetName, Table? table = null)
+        {
+            if (Document != null && Document.IsReadOnly) return;
+            table ??= GetCurrentTable();
+            if (table == null) return;
+
+            bool header = true;
+            if (table.Tag is string tag && tag.Contains("header:false")) header = false;
+
+            MarkdownParserService.ApplyTablePreset(table, presetName, header);
+            if (Document != null) Document.IsModified = true;
+            FormattedRichTextBox.Focus();
+        }
+
+        public ContextMenu CreateTableContextMenu(TableCell cell)
+        {
+            var cm = new ContextMenu();
+            var table = GetContainingTable(cell);
+            bool isReadOnly = Document != null && Document.IsReadOnly;
+
+            // Standard clipboard actions
+            var cutItem = new MenuItem { Header = "Cut", Command = ApplicationCommands.Cut };
+            var copyItem = new MenuItem { Header = "Copy", Command = ApplicationCommands.Copy };
+            var pasteItem = new MenuItem { Header = "Paste", Command = ApplicationCommands.Paste };
+            cm.Items.Add(cutItem);
+            cm.Items.Add(copyItem);
+            cm.Items.Add(pasteItem);
+            cm.Items.Add(new Separator());
+
+            // Row Operations
+            var rowMenu = new MenuItem { Header = "Row", IsEnabled = !isReadOnly };
+            var insertRowAbove = new MenuItem { Header = "Insert Row Above" };
+            insertRowAbove.Click += (s, e) => InsertRowAbove(cell);
+            var insertRowBelow = new MenuItem { Header = "Insert Row Below" };
+            insertRowBelow.Click += (s, e) => InsertRowBelow(cell);
+            var deleteRow = new MenuItem { Header = "Delete Row" };
+            deleteRow.Click += (s, e) => DeleteRow(cell);
+            rowMenu.Items.Add(insertRowAbove);
+            rowMenu.Items.Add(insertRowBelow);
+            rowMenu.Items.Add(deleteRow);
+            cm.Items.Add(rowMenu);
+
+            // Column Operations
+            var colMenu = new MenuItem { Header = "Column", IsEnabled = !isReadOnly };
+            var insertColLeft = new MenuItem { Header = "Insert Column Left" };
+            insertColLeft.Click += (s, e) => InsertColumnLeft(cell);
+            var insertColRight = new MenuItem { Header = "Insert Column Right" };
+            insertColRight.Click += (s, e) => InsertColumnRight(cell);
+            var deleteCol = new MenuItem { Header = "Delete Column" };
+            deleteCol.Click += (s, e) => DeleteColumn(cell);
+            colMenu.Items.Add(insertColLeft);
+            colMenu.Items.Add(insertColRight);
+            colMenu.Items.Add(deleteCol);
+            cm.Items.Add(colMenu);
+
+            // Column Alignment
+            var alignMenu = new MenuItem { Header = "Align Column", IsEnabled = !isReadOnly };
+            var curAlign = GetCurrentColumnAlignment();
+            var alignLeft = new MenuItem { Header = "Left", IsChecked = curAlign == TextAlignment.Left };
+            alignLeft.Click += (s, e) => SetColumnAlignment(TextAlignment.Left, cell);
+            var alignCenter = new MenuItem { Header = "Center", IsChecked = curAlign == TextAlignment.Center };
+            alignCenter.Click += (s, e) => SetColumnAlignment(TextAlignment.Center, cell);
+            var alignRight = new MenuItem { Header = "Right", IsChecked = curAlign == TextAlignment.Right };
+            alignRight.Click += (s, e) => SetColumnAlignment(TextAlignment.Right, cell);
+            alignMenu.Items.Add(alignLeft);
+            alignMenu.Items.Add(alignCenter);
+            alignMenu.Items.Add(alignRight);
+            cm.Items.Add(alignMenu);
+
+            // Table Style Presets
+            var styleMenu = new MenuItem { Header = "Table Style", IsEnabled = !isReadOnly };
+            var curPreset = GetCurrentTablePreset();
+            var gridStyle = new MenuItem { Header = "Light Grid (Default)", IsChecked = curPreset == "grid" };
+            gridStyle.Click += (s, e) => SetTablePreset("grid", table);
+            var zebraStyle = new MenuItem { Header = "Zebra Rows", IsChecked = curPreset == "zebra" };
+            zebraStyle.Click += (s, e) => SetTablePreset("zebra", table);
+            var minimalStyle = new MenuItem { Header = "Minimal", IsChecked = curPreset == "minimal" };
+            minimalStyle.Click += (s, e) => SetTablePreset("minimal", table);
+            styleMenu.Items.Add(gridStyle);
+            styleMenu.Items.Add(zebraStyle);
+            styleMenu.Items.Add(minimalStyle);
+            cm.Items.Add(styleMenu);
+
+            // Header Row Toggle
+            bool curHeader = GetCurrentTableHeaderState();
+            var headerItem = new MenuItem { Header = "Header Row", IsCheckable = true, IsChecked = curHeader, IsEnabled = !isReadOnly };
+            headerItem.Click += (s, e) => ToggleHeaderRow(table);
+            cm.Items.Add(headerItem);
+
+            cm.Items.Add(new Separator());
+
+            // Delete Table
+            var delTableItem = new MenuItem { Header = "Delete Table", IsEnabled = !isReadOnly };
+            delTableItem.Click += (s, e) => DeleteTable(table);
+            cm.Items.Add(delTableItem);
+
+            return cm;
         }
 
         #endregion

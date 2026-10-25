@@ -22,7 +22,14 @@ namespace NotepadByFerryPot.Controls
                     {
                         int caretIndex = MainTextBox.CaretIndex;
                         int lineIndex = MainTextBox.GetLineIndexFromCharacterIndex(caretIndex);
-                        string lineText = MainTextBox.GetLineText(lineIndex).TrimStart();
+                        string lineFull = MainTextBox.GetLineText(lineIndex);
+                        string lineTrimmed = lineFull.Trim();
+                        string lineText = lineFull.TrimStart();
+                        if (lineTrimmed.StartsWith("|") && lineTrimmed.EndsWith("|"))
+                        {
+                            state.IsTable = true;
+                        }
+
                         int h = 0;
                         while (h < lineText.Length && lineText[h] == '#') h++;
                         if (h >= 1 && h <= 6 && h < lineText.Length && lineText[h] == ' ')
@@ -133,6 +140,11 @@ namespace NotepadByFerryPot.Controls
                         }
                         while (current != null && !(current is FlowDocument))
                         {
+                            if (current is TableCell || current is TableRow || current is Table)
+                            {
+                                state.IsTable = true;
+                            }
+
                             if (current is ListItem || current is System.Windows.Documents.List)
                             {
                                 state.IsList = true;
@@ -171,5 +183,6 @@ namespace NotepadByFerryPot.Controls
         public bool IsHighlight { get; set; }
         public string Heading { get; set; } = "Normal";
         public bool IsList { get; set; }
+        public bool IsTable { get; set; }
     }
 }

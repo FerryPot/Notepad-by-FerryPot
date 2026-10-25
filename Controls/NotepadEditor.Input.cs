@@ -290,7 +290,120 @@ namespace NotepadByFerryPot.Controls
 
         private void FormattedRichTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
         {
-            // Enter key and Tab key work natively in RichTextBox
+            if (e.Key == Key.Tab)
+            {
+                var cell = GetCurrentTableCell();
+                if (cell != null)
+                {
+                    e.Handled = true;
+                    bool isShift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
+                    if (isShift)
+                    {
+                        NavigatePreviousTableCell(cell);
+                    }
+                    else
+                    {
+                        NavigateNextTableCell(cell);
+                    }
+                    return;
+                }
+            }
+        }
+
+        private void NavigateNextTableCell(TableCell cell)
+        {
+            var row = GetContainingRow(cell);
+            var rowGroup = GetContainingRowGroup(row);
+            if (row == null || rowGroup == null) return;
+
+            int cellIdx = row.Cells.IndexOf(cell);
+            if (cellIdx >= 0 && cellIdx < row.Cells.Count - 1)
+            {
+                SelectCellContent(row.Cells[cellIdx + 1]);
+            }
+            else
+            {
+                int rowIdx = rowGroup.Rows.IndexOf(row);
+                if (rowIdx >= 0 && rowIdx < rowGroup.Rows.Count - 1)
+                {
+                    var nextRow = rowGroup.Rows[rowIdx + 1];
+                    if (nextRow.Cells.Count > 0)
+                    {
+                        SelectCellContent(nextRow.Cells[0]);
+                    }
+                }
+                else
+                {
+                    // Tab on last cell of last row adds a new row!
+                    var newRow = InsertRowBelow(cell);
+                    if (newRow != null && newRow.Cells.Count > 0)
+                    {
+                        SelectCellContent(newRow.Cells[0]);
+                    }
+                }
+            }
+        }
+
+        private void NavigatePreviousTableCell(TableCell cell)
+        {
+            var row = GetContainingRow(cell);
+            var rowGroup = GetContainingRowGroup(row);
+            if (row == null || rowGroup == null) return;
+
+            int cellIdx = row.Cells.IndexOf(cell);
+            if (cellIdx > 0)
+            {
+                SelectCellContent(row.Cells[cellIdx - 1]);
+            }
+            else
+            {
+                int rowIdx = rowGroup.Rows.IndexOf(row);
+                if (rowIdx > 0)
+                {
+                    var prevRow = rowGroup.Rows[rowIdx - 1];
+                    if (prevRow.Cells.Count > 0)
+                    {
+                        SelectCellContent(prevRow.Cells[prevRow.Cells.Count - 1]);
+                    }
+                }
+            }
+        }
+
+        private void SelectCellContent(TableCell cell)
+        {
+            if (cell.Blocks.FirstBlock != null)
+            {
+                var start = cell.Blocks.FirstBlock.ContentStart;
+                var end = cell.Blocks.LastBlock?.ContentEnd ?? start;
+                FormattedRichTextBox.Selection.Select(start, end);
+                FormattedRichTextBox.CaretPosition = end;
+                FormattedRichTextBox.Focus();
+            }
+        }
+
+        private void FormattedRichTextBox_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+        {
+            TextPointer? pointer = null;
+            if (e.CursorLeft >= 0 && e.CursorTop >= 0)
+            {
+                var pt = new Point(e.CursorLeft, e.CursorTop);
+                pointer = FormattedRichTextBox.GetPositionFromPoint(pt, true);
+            }
+            if (pointer == null)
+            {
+                pointer = FormattedRichTextBox.CaretPosition;
+            }
+
+            var cell = GetContainingCell(pointer);
+            if (cell != null)
+            {
+                FormattedRichTextBox.CaretPosition = pointer;
+                FormattedRichTextBox.ContextMenu = CreateTableContextMenu(cell);
+            }
+            else
+            {
+                FormattedRichTextBox.ContextMenu = null;
+            }
         }
 
         private void UpdateStatusFromFormatted()

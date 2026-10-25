@@ -104,6 +104,7 @@
                      SelectionChanged="FormattedRichTextBox_SelectionChanged"
                      TextChanged="FormattedRichTextBox_TextChanged"
                      PreviewKeyDown="FormattedRichTextBox_PreviewKeyDown"
+                     ContextMenuOpening="FormattedRichTextBox_ContextMenuOpening"
                      PreviewMouseLeftButtonDown="FormattedRichTextBox_PreviewMouseLeftButtonDown">
             <RichTextBox.Resources>
                 <Style TargetType="{x:Type FlowDocument}">

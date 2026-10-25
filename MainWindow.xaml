@@ -345,7 +345,7 @@
                                 Click="TextToolsMenu_Click">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                 <TextBlock Text="Aa" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" Margin="0,0,3,0" Foreground="{DynamicResource MaterialDesignBody}"/>
-                                <materialDesign:PackIcon Kind="ChevronDown" Width="14" Height="14" VerticalAlignment="Center" Foreground="{DynamicResource MaterialDesignBody}"/>
+                                <materialDesign:PackIcon x:Name="TextToolsChevron" Kind="ChevronDown" Width="14" Height="14" VerticalAlignment="Center" Foreground="{DynamicResource MaterialDesignBody}"/>
                             </StackPanel>
                             <Button.ContextMenu>
                                 <ContextMenu x:Name="TextToolsContextMenu">
@@ -464,11 +464,12 @@
                         <Button Style="{StaticResource MaterialDesignFlatButton}" 
                                 Padding="6,0" Height="28"
                                 Margin="2,0,0,0"
-                                ToolTip="Insert Markdown Table"
+                                x:Name="TableToolbarButton"
+                                ToolTip="Table (Insert &amp; Format)"
                                 Click="TableMenu_Click">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <materialDesign:PackIcon Kind="TableLarge" Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,3,0" Foreground="{DynamicResource MaterialDesignBody}"/>
-                                <materialDesign:PackIcon Kind="ChevronDown" Width="14" Height="14" VerticalAlignment="Center" Foreground="{DynamicResource MaterialDesignBody}"/>
+                                <materialDesign:PackIcon Kind="TableLarge" x:Name="TableToolbarIcon" Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,3,0" Foreground="{DynamicResource MaterialDesignBody}"/>
+                                <materialDesign:PackIcon x:Name="TableToolbarChevron" Kind="ChevronDown" Width="14" Height="14" VerticalAlignment="Center" Foreground="{DynamicResource MaterialDesignBody}"/>
                             </StackPanel>
                             <Button.ContextMenu>
                                 <ContextMenu x:Name="TableContextMenu">

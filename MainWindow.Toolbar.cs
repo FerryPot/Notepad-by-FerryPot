@@ -120,8 +120,120 @@ namespace NotepadByFerryPot
         {
             if (sender is Button btn && btn.ContextMenu != null)
             {
+                PopulateTableMenu(btn.ContextMenu);
                 btn.ContextMenu.PlacementTarget = btn;
                 btn.ContextMenu.IsOpen = true;
+            }
+        }
+
+        private void PopulateTableMenu(ContextMenu menu)
+        {
+            menu.Items.Clear();
+            var editor = ActiveEditor;
+            if (editor == null) return;
+
+            bool isReadOnly = _activeDocument?.IsReadOnly == true;
+            bool insideTable = editor.IsInsideTable();
+
+            if (insideTable)
+            {
+                var cell = editor.GetCurrentTableCell();
+                var table = editor.GetCurrentTable();
+
+                // Row Operations
+                var rowMenu = new MenuItem { Header = "Row", IsEnabled = !isReadOnly };
+                var insertRowAbove = new MenuItem { Header = "Insert Row Above" };
+                insertRowAbove.Click += (s, e) => editor.InsertRowAbove(cell);
+                var insertRowBelow = new MenuItem { Header = "Insert Row Below" };
+                insertRowBelow.Click += (s, e) => editor.InsertRowBelow(cell);
+                var deleteRow = new MenuItem { Header = "Delete Row" };
+                deleteRow.Click += (s, e) => editor.DeleteRow(cell);
+                rowMenu.Items.Add(insertRowAbove);
+                rowMenu.Items.Add(insertRowBelow);
+                rowMenu.Items.Add(deleteRow);
+                menu.Items.Add(rowMenu);
+
+                // Column Operations
+                var colMenu = new MenuItem { Header = "Column", IsEnabled = !isReadOnly };
+                var insertColLeft = new MenuItem { Header = "Insert Column Left" };
+                insertColLeft.Click += (s, e) => editor.InsertColumnLeft(cell);
+                var insertColRight = new MenuItem { Header = "Insert Column Right" };
+                insertColRight.Click += (s, e) => editor.InsertColumnRight(cell);
+                var deleteCol = new MenuItem { Header = "Delete Column" };
+                deleteCol.Click += (s, e) => editor.DeleteColumn(cell);
+                colMenu.Items.Add(insertColLeft);
+                colMenu.Items.Add(insertColRight);
+                colMenu.Items.Add(deleteCol);
+                menu.Items.Add(colMenu);
+
+                // Column Alignment
+                var alignMenu = new MenuItem { Header = "Align Column", IsEnabled = !isReadOnly };
+                var curAlign = editor.GetCurrentColumnAlignment();
+                var alignLeft = new MenuItem { Header = "Left", IsChecked = curAlign == TextAlignment.Left };
+                alignLeft.Click += (s, e) => editor.SetColumnAlignment(TextAlignment.Left, cell);
+                var alignCenter = new MenuItem { Header = "Center", IsChecked = curAlign == TextAlignment.Center };
+                alignCenter.Click += (s, e) => editor.SetColumnAlignment(TextAlignment.Center, cell);
+                var alignRight = new MenuItem { Header = "Right", IsChecked = curAlign == TextAlignment.Right };
+                alignRight.Click += (s, e) => editor.SetColumnAlignment(TextAlignment.Right, cell);
+                alignMenu.Items.Add(alignLeft);
+                alignMenu.Items.Add(alignCenter);
+                alignMenu.Items.Add(alignRight);
+                menu.Items.Add(alignMenu);
+
+                // Table Style Presets
+                var styleMenu = new MenuItem { Header = "Table Style", IsEnabled = !isReadOnly };
+                var curPreset = editor.GetCurrentTablePreset();
+                var gridStyle = new MenuItem { Header = "Light Grid (Default)", IsChecked = curPreset == "grid" };
+                gridStyle.Click += (s, e) => editor.SetTablePreset("grid", table);
+                var zebraStyle = new MenuItem { Header = "Zebra Rows", IsChecked = curPreset == "zebra" };
+                zebraStyle.Click += (s, e) => editor.SetTablePreset("zebra", table);
+                var minimalStyle = new MenuItem { Header = "Minimal", IsChecked = curPreset == "minimal" };
+                minimalStyle.Click += (s, e) => editor.SetTablePreset("minimal", table);
+                styleMenu.Items.Add(gridStyle);
+                styleMenu.Items.Add(zebraStyle);
+                styleMenu.Items.Add(minimalStyle);
+                menu.Items.Add(styleMenu);
+
+                // Header Row Toggle
+                bool curHeader = editor.GetCurrentTableHeaderState();
+                var headerItem = new MenuItem { Header = "Header Row", IsCheckable = true, IsChecked = curHeader, IsEnabled = !isReadOnly };
+                headerItem.Click += (s, e) => editor.ToggleHeaderRow(table);
+                menu.Items.Add(headerItem);
+
+                menu.Items.Add(new Separator());
+
+                // Delete Table
+                var delTableItem = new MenuItem { Header = "Delete Table", IsEnabled = !isReadOnly };
+                delTableItem.Click += (s, e) => editor.DeleteTable(table);
+                menu.Items.Add(delTableItem);
+
+                menu.Items.Add(new Separator());
+
+                // Submenu to insert new table even if inside a table
+                var insertSubMenu = new MenuItem { Header = "Insert New Table", IsEnabled = !isReadOnly };
+                var sub2x2 = new MenuItem { Header = "2 × 2 Table" };
+                sub2x2.Click += (s, e) => editor.InsertTable(2, 2);
+                var sub3x3 = new MenuItem { Header = "3 × 3 Table" };
+                sub3x3.Click += (s, e) => editor.InsertTable(3, 3);
+                var sub4x4 = new MenuItem { Header = "4 × 4 Table" };
+                sub4x4.Click += (s, e) => editor.InsertTable(4, 4);
+                insertSubMenu.Items.Add(sub2x2);
+                insertSubMenu.Items.Add(sub3x3);
+                insertSubMenu.Items.Add(sub4x4);
+                menu.Items.Add(insertSubMenu);
+            }
+            else
+            {
+                var t2x2 = new MenuItem { Header = "2 × 2 Table", IsEnabled = !isReadOnly };
+                t2x2.Click += (s, e) => editor.InsertTable(2, 2);
+                var t3x3 = new MenuItem { Header = "3 × 3 Table", IsEnabled = !isReadOnly };
+                t3x3.Click += (s, e) => editor.InsertTable(3, 3);
+                var t4x4 = new MenuItem { Header = "4 × 4 Table", IsEnabled = !isReadOnly };
+                t4x4.Click += (s, e) => editor.InsertTable(4, 4);
+
+                menu.Items.Add(t2x2);
+                menu.Items.Add(t3x3);
+                menu.Items.Add(t4x4);
             }
         }
 
@@ -255,6 +367,14 @@ namespace NotepadByFerryPot
                 HighlightBorder.Background = state.IsHighlight ? highlightBackground : Brushes.Transparent;
                 HighlightToolbarIcon.Foreground = state.IsHighlight ? activeIconBrush : bodyBrush;
                 HighlightDropdownChevron.Foreground = state.IsHighlight ? activeIconBrush : bodyBrush;
+            }
+
+            // Table
+            if (TableToolbarButton != null && TableToolbarIcon != null && TableToolbarChevron != null)
+            {
+                TableToolbarButton.Background = state.IsTable ? highlightBackground : Brushes.Transparent;
+                TableToolbarIcon.Foreground = state.IsTable ? activeIconBrush : bodyBrush;
+                TableToolbarChevron.Foreground = state.IsTable ? activeIconBrush : bodyBrush;
             }
         }
 
