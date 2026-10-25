@@ -16,6 +16,10 @@
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <VersionPrefix>1.0.0</VersionPrefix>
+    <Authors>FerryPot</Authors>
+    <Company>FerryPot</Company>
+    <Copyright>Copyright (c) 2026 [YOUR NAME]</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <PropertyGroup>

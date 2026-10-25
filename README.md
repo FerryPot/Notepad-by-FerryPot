@@ -141,4 +141,5 @@ Use [GitHub Issues](https://github.com/FerryPot/NotepadByFerryPot/issues) with o
 ## 📄 License & Credits
 
 - **License**: Released under the [MIT License](LICENSE).
+- **Third-Party Notices**: See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) for licenses and details of third-party open-source components.
 - **Credits**: Built with [MaterialDesignInXamlToolkit](https://github.com/MaterialDesignInXAML/MaterialDesignInXamlToolkit) for Google Material Design 3 WPF controls.
