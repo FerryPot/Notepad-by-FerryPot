@@ -10,15 +10,16 @@ This project incorporates components from the open-source projects listed below.
 - **Version**: `5.4.0`
 - **License**: [MIT](https://licenses.nuget.org/MIT)
 - **Project Link**: https://github.com/MaterialDesignInXAML/MaterialDesignInXamlToolkit
-- **Copyright**: Copyright 2026 James Willock/Mulholland Software Ltd
+- **Copyright (from project LICENSE)**: `Copyright (c) James Willock, Mulholland Software and Contributors`
+- **Copyright (from package metadata)**: `Copyright 2026 James Willock/Mulholland Software Ltd`
 - **Authors**: James Willock
 
-### License Text (MIT License)
+### License Text (from project's LICENSE file)
 
 ```
 The MIT License (MIT)
 
-Copyright (c) 2026 James Willock/Mulholland Software Ltd
+Copyright (c) James Willock, Mulholland Software and Contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -47,15 +48,16 @@ SOFTWARE.
 - **Version**: `5.4.0`
 - **License**: [MIT](https://licenses.nuget.org/MIT)
 - **Project Link**: https://github.com/MaterialDesignInXAML/MaterialDesignInXamlToolkit
-- **Copyright**: Copyright 2026 James Willock/Mulholland Software Ltd
+- **Copyright (from project LICENSE)**: `Copyright (c) James Willock, Mulholland Software and Contributors`
+- **Copyright (from package metadata)**: `Copyright 2026 James Willock/Mulholland Software Ltd`
 - **Authors**: James Willock
 
-### License Text (MIT License)
+### License Text (from project's LICENSE file)
 
 ```
 The MIT License (MIT)
 
-Copyright (c) 2026 James Willock/Mulholland Software Ltd
+Copyright (c) James Willock, Mulholland Software and Contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
